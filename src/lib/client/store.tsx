@@ -48,7 +48,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!r) return;
       const [savedMaster, savedUser] = await Promise.all([r.master.load(), r.user.load()]);
       if (cancelled) return;
-      const m = savedMaster ?? seed;
+      // 保存済みマスターの日本語名は、同梱データの表記で上書きする（表記修正を反映するため）
+      const seedNames = new Map(seed.heroes.map((h) => [h.id, h.nameJa]));
+      const m = savedMaster
+        ? { ...savedMaster, heroes: savedMaster.heroes.map((h) => (seedNames.has(h.id) ? { ...h, nameJa: seedNames.get(h.id) } : h)) }
+        : seed;
       setMaster(m);
       if (savedUser) {
         // マスターに英雄が追加されていれば初期値を補う
