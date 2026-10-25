@@ -319,7 +319,25 @@ export interface ScoreBreakdown {
     survival?: number; // 防衛系の生存係数
   };
   perTroop?: Record<TroopType, number>;
+  /** 英雄ごとの寄与（なぜその英雄が選ばれたかを画面に出すため） */
+  heroContrib?: HeroContribution[];
   notes: string[];
+}
+
+export interface HeroContribution {
+  heroId: string;
+  level: number;
+  stars: number;
+  /** レベル補正 × 星補正 × 覚醒 × 装備 */
+  growth: number;
+  /** ステータス寄与の説明（例: "歩兵の攻撃 +312%"） */
+  statText: string;
+  /** スコアに効いたスキル */
+  skills: Array<{ skill: string; stat: EffectStat; value: number }>;
+  /** スキルの数値が未取得（= 0 として計算している） */
+  missingSkills: boolean;
+  /** ステータスが推定値 */
+  estimatedStats: boolean;
 }
 
 export interface FormationResult {
