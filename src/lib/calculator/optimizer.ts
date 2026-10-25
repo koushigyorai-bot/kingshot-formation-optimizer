@@ -178,6 +178,12 @@ export function optimize(
     out = searchHeroBattle(ctx, pool, slots);
   }
 
+  const missing = new Set(out.results.flatMap((r) => (r.score.heroContrib ?? []).filter((c) => c.missingSkills).map((c) => heroes.get(c.heroId)?.name ?? c.heroId)));
+  if (missing.size > 0) {
+    warnings.push(
+      `スキルの数値が未取得の英雄は、スキル効果を 0 として計算しています（${[...missing].join('、')}）。星やレベルを上げても、スキルが判明している英雄に負けやすくなります。「データ更新」で取得すると正しく比較できます。`,
+    );
+  }
   const estimated = out.results.filter((r) => r.usesEstimatedData).length;
   if (estimated > 0) warnings.push(`上位 ${out.results.length} 件中 ${estimated} 件に推定値の英雄が含まれます。/data でクロールすると精度が上がります。`);
 

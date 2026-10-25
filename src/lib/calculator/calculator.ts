@@ -17,6 +17,7 @@
 import type {
   EffectStat,
   EventType,
+  HeroContribution,
   HeroMaster,
   MarchRole,
   OwnedHero,
@@ -204,6 +205,7 @@ export interface ExpeditionPrecomp {
   adjusted: Record<TroopType, number>; // イベント補正後の係数
   factors: Record<TroopType, ScoreBreakdown['factors']>;
   notes: string[];
+  heroContrib: HeroContribution[];
   stance: EventRule['stance'];
   event: EventType;
 }
@@ -282,13 +284,34 @@ export function precomputeExpedition(
     factors[t] = { skillBuff, counter, widget, lethality, squadAttack, crit, survival };
   }
 
+  const heroContrib: HeroContribution[] = formation.map((h) => {
+    const o = user.heroes[h.id];
+    const g = o ? heroGrowth(o, cfg) * heroGearFactor(o, cfg) : 0;
+    const statPct = heroStatsApply ? h.expedition.attack * g : 0;
+    return {
+      heroId: h.id,
+      level: o?.level ?? 0,
+      stars: o?.stars ?? 0,
+      growth: g,
+      statText: heroStatsApply
+        ? `${TROOP_LABEL[h.troop]}の攻撃 +${statPct.toFixed(0)}%（基礎 ${h.expedition.attack}% × 補正 ${g.toFixed(2)}）`
+        : '参加時は英雄ステータスは反映されない',
+      skills: skills.contributions.filter((c) => c.heroId === h.id).map(({ skill, stat, value }) => ({ skill, stat, value })),
+      missingSkills: !h.skills.some((sk) => sk.kind === 'expedition'),
+      estimatedStats: !!h.estimatedFields?.includes('expedition'),
+    };
+  });
+  const inFormation = new Set(formation.map((h) => h.id));
+  const talents = skills.contributions.filter((c) => !inFormation.has(c.heroId));
+  if (talents.length) notes.push(`編成外タレント: ${talents.map((c) => `${allHeroes.get(c.heroId)?.name ?? c.heroId}「${c.skill}」+${c.value}%`).join('、')}`);
+
   if (role === 'joiner') notes.push('参加者（ジョイナー）として計算: 先頭英雄の 1 番目の Expedition スキルのみ反映（公式 Wiki）');
   if (event === 'bear') notes.push('熊は反撃しないため与ダメージのみで評価。弓兵に Ranged Strike +10% を適用');
   if (user.buffs.reportOverride.enabled) notes.push('兵種ステータスは戦闘レポートの値で上書き中');
   for (const h of formation) {
     if (h.estimatedFields?.length) notes.push(`${h.name}: ${h.estimatedFields.join('・')} が推定値`);
   }
-  return { offense, defense, base, adjusted, factors, notes, stance: rule.stance, event };
+  return { offense, defense, base, adjusted, factors, notes, heroContrib, stance: rule.stance, event };
 }
 
 /** 兵種比率から実際に送れる兵数を求める（在庫不足の兵種は在庫で頭打ち） */
@@ -357,6 +380,7 @@ export function scoreExpedition(pre: ExpeditionPrecomp, ratio: TroopRatio, user:
       survival: w('survival'),
     },
     perTroop,
+    heroContrib: pre.heroContrib,
     notes: [...pre.notes, ...shortages],
   };
 }
@@ -411,6 +435,7 @@ export function scoreHeroBattle(
   let totalDps = 0;
   let frontEhp = 0;
   const stats: HeroBattleStats[] = [];
+  const contrib: HeroContribution[] = [];
 
   formation.forEach((h, idx) => {
     const o = user.heroes[h.id];
@@ -454,6 +479,16 @@ export function scoreHeroBattle(
     totalDps += dps;
     if (isFront) frontEhp += ehp;
     stats.push({ heroId: h.id, attack, defense, health, ehp, dps });
+    contrib.push({
+      heroId: h.id,
+      level: o.level,
+      stars: o.stars,
+      growth: g,
+      statText: `攻撃 ${Math.round(attack).toLocaleString()} ・ 実効HP ${Math.round(ehp).toLocaleString()}（補正 ${g.toFixed(2)}）`,
+      skills: own.contributions.map(({ skill, stat, value }) => ({ skill, stat, value })),
+      missingSkills: !h.skills.some((sk) => sk.kind === 'conquest'),
+      estimatedStats: !!h.estimatedFields?.includes('conquest'),
+    });
     if (h.estimatedFields?.includes('conquest')) notes.push(`${h.name}: Conquest ステータスが推定値`);
   });
 
@@ -467,6 +502,7 @@ export function scoreHeroBattle(
     eventAdjusted: adjusted,
     total,
     factors: { skillBuff: 1 + enemyTakenUp / 100, counter: 1, widget: 1, lethality: 1, squadAttack: 1 + teamAttack / 100, crit: 1, survival },
+    heroContrib: contrib,
     notes,
     heroes: stats,
   };
