@@ -58,45 +58,49 @@ interface RosterEntry {
   officialPath: string; // kingshotwiki.com/heroes/<path>/
 }
 
-/** 公式 Wiki 英雄一覧の掲載順（Rare → Epic → S1 … S8） */
+/**
+ * 公式 Wiki 英雄一覧の掲載順（Rare → Epic → S1 … S8）
+ * nameJa は公式 Wiki 日本語版（https://kingshotwiki.com/ja/heroes/）の表記。
+ * 日本語版に未掲載の英雄（Gen8）は空欄にして英語名だけを表示する。
+ */
 export const ROSTER: RosterEntry[] = [
   { id: 'olive', name: 'Olive', nameJa: 'オリーブ', generation: null, rarity: 'rare', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50003_kingshot_end' },
   { id: 'edwin', name: 'Edwin', nameJa: 'エドウィン', generation: null, rarity: 'rare', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50002_kingshot_end' },
-  { id: 'forrest', name: 'Forrest', nameJa: 'フォレスト', generation: null, rarity: 'rare', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50000_kingshot_end' },
-  { id: 'seth', name: 'Seth', nameJa: 'セス', generation: null, rarity: 'rare', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50001_kingshot_end' },
+  { id: 'forrest', name: 'Forrest', nameJa: 'フォルスト', generation: null, rarity: 'rare', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50000_kingshot_end' },
+  { id: 'seth', name: 'Seth', nameJa: 'スミス', generation: null, rarity: 'rare', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50001_kingshot_end' },
   { id: 'quinn', name: 'Quinn', nameJa: 'クイン', generation: null, rarity: 'epic', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50006_kingshot_end' },
   { id: 'diana', name: 'Diana', nameJa: 'ダイアナ', generation: null, rarity: 'epic', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50008_kingshot_end' },
-  { id: 'amane', name: 'Amane', nameJa: 'アマネ', generation: null, rarity: 'epic', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50027_kingshot_end' },
-  { id: 'yeonwoo', name: 'Yeonwoo', nameJa: 'ヨヌ', generation: null, rarity: 'epic', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50028_kingshot_end' },
+  { id: 'amane', name: 'Amane', nameJa: 'あまね', generation: null, rarity: 'epic', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50027_kingshot_end' },
+  { id: 'yeonwoo', name: 'Yeonwoo', nameJa: 'インウー', generation: null, rarity: 'epic', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50028_kingshot_end' },
   { id: 'gordon', name: 'Gordon', nameJa: 'ゴードン', generation: null, rarity: 'epic', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50005_kingshot_end' },
   { id: 'chenko', name: 'Chenko', nameJa: 'チェンコ', generation: null, rarity: 'epic', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50007_kingshot_end' },
   { id: 'fahd', name: 'Fahd', nameJa: 'ファハド', generation: null, rarity: 'epic', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50029_kingshot_end' },
   { id: 'howard', name: 'Howard', nameJa: 'ハワード', generation: null, rarity: 'epic', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50004_kingshot_end' },
-  { id: 'saul', name: 'Saul', nameJa: 'ソール', generation: 1, rarity: 'legendary', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50017_kingshot_end' },
-  { id: 'jabel', name: 'Jabel', nameJa: 'ジャベル', generation: 1, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50012_kingshot_end' },
+  { id: 'saul', name: 'Saul', nameJa: 'サロ', generation: 1, rarity: 'legendary', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50017_kingshot_end' },
+  { id: 'jabel', name: 'Jabel', nameJa: 'ジェベル', generation: 1, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50012_kingshot_end' },
   { id: 'helga', name: 'Helga', nameJa: 'ヘルガ', generation: 1, rarity: 'legendary', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50009_kingshot_end' },
   { id: 'amadeus', name: 'Amadeus', nameJa: 'アマデウス', generation: 1, rarity: 'legendary', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50011_kingshot_end' },
-  { id: 'marlin', name: 'Marlin', nameJa: 'マーリン', generation: 2, rarity: 'legendary', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50018_kingshot_end' },
+  { id: 'marlin', name: 'Marlin', nameJa: 'マリン', generation: 2, rarity: 'legendary', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50018_kingshot_end' },
   { id: 'hilde', name: 'Hilde', nameJa: 'ヒルデ', generation: 2, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50013_kingshot_end' },
   { id: 'zoe', name: 'Zoe', nameJa: 'ゾーイ', generation: 2, rarity: 'legendary', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50021_kingshot_end' },
   { id: 'jaeger', name: 'Jaeger', nameJa: 'イェーガー', generation: 3, rarity: 'legendary', troop: 'archer', officialPath: 'jaegar' },
-  { id: 'petra', name: 'Petra', nameJa: 'ペトラ', generation: 3, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50016_kingshot_end' },
+  { id: 'petra', name: 'Petra', nameJa: 'ペーラ', generation: 3, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50016_kingshot_end' },
   { id: 'eric', name: 'Eric', nameJa: 'エリック', generation: 3, rarity: 'legendary', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50010_kingshot_end' },
   { id: 'rosa', name: 'Rosa', nameJa: 'ローザ', generation: 4, rarity: 'legendary', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50022_kingshot_end' },
   { id: 'margot', name: 'Margot', nameJa: 'マーゴ', generation: 4, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50014_kingshot_end' },
-  { id: 'alcar', name: 'Alcar', nameJa: 'アルカー', generation: 4, rarity: 'legendary', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50023_kingshot_end' },
-  { id: 'vivian', name: 'Vivian', nameJa: 'ヴィヴィアン', generation: 5, rarity: 'legendary', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50026_kingshot_end' },
-  { id: 'thrud', name: 'Thrud', nameJa: 'スルーズ', generation: 5, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50025_kingshot_end' },
-  { id: 'long-fei', name: 'Long Fei', nameJa: 'ロンフェイ', generation: 5, rarity: 'legendary', troop: 'infantry', officialPath: 'long-fei' },
+  { id: 'alcar', name: 'Alcar', nameJa: 'アルカ', generation: 4, rarity: 'legendary', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50023_kingshot_end' },
+  { id: 'vivian', name: 'Vivian', nameJa: 'ビビアン', generation: 5, rarity: 'legendary', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50026_kingshot_end' },
+  { id: 'thrud', name: 'Thrud', nameJa: 'スルード', generation: 5, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50025_kingshot_end' },
+  { id: 'long-fei', name: 'Long Fei', nameJa: '龍飛', generation: 5, rarity: 'legendary', troop: 'infantry', officialPath: 'long-fei' },
   { id: 'yang', name: 'Yang', nameJa: 'ヤン', generation: 6, rarity: 'legendary', troop: 'archer', officialPath: 'kingshot_wiki_hero_name_50031_kingshot_end' },
   { id: 'sophia', name: 'Sophia', nameJa: 'ソフィア', generation: 6, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50030_kingshot_end' },
   { id: 'triton', name: 'Triton', nameJa: 'トリトン', generation: 6, rarity: 'legendary', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50019_kingshot_end' },
-  { id: 'wee-woo', name: 'Wee & Woo', nameJa: 'ウィー＆ウー', generation: 7, rarity: 'legendary', troop: 'archer', officialPath: 'weewoo' },
-  { id: 'ava', name: 'Ava', nameJa: 'エヴァ', generation: 7, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50015_kingshot_end' },
+  { id: 'wee-woo', name: 'Wee & Woo', nameJa: 'レン＆ロン', generation: 7, rarity: 'legendary', troop: 'archer', officialPath: 'weewoo' },
+  { id: 'ava', name: 'Ava', nameJa: 'アイヴァ', generation: 7, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_hero_name_50015_kingshot_end' },
   { id: 'charles', name: 'Charles', nameJa: 'チャールズ', generation: 7, rarity: 'legendary', troop: 'infantry', officialPath: 'kingshot_wiki_hero_name_50032_kingshot_end' },
-  { id: 'luna', name: 'Luna', nameJa: 'ルナ', generation: 8, rarity: 'legendary', troop: 'archer', officialPath: 'luna-2' },
-  { id: 'liz', name: 'Liz', nameJa: 'リズ', generation: 8, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_liz_kingshot_end' },
-  { id: 'diego', name: 'Diego', nameJa: 'ディエゴ', generation: 8, rarity: 'legendary', troop: 'infantry', officialPath: 'diego' },
+  { id: 'luna', name: 'Luna', nameJa: '', generation: 8, rarity: 'legendary', troop: 'archer', officialPath: 'luna-2' },
+  { id: 'liz', name: 'Liz', nameJa: '', generation: 8, rarity: 'legendary', troop: 'cavalry', officialPath: 'kingshot_wiki_liz_kingshot_end' },
+  { id: 'diego', name: 'Diego', nameJa: '', generation: 8, rarity: 'legendary', troop: 'infantry', officialPath: 'diego' },
 ];
 
 /* ------------------------------------------------------------------ */
