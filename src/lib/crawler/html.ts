@@ -51,7 +51,7 @@ export function collectLinks(html: string, baseUrl: string, filter: (href: strin
     const src = $el.attr('src') ?? '';
     const tm = src.match(/soldier_icon_type_00(\d)/);
     if (tm) troop = tm[1] === '1' ? 'infantry' : tm[1] === '2' ? 'cavalry' : tm[1] === '3' ? 'archer' : undefined;
-    if (el.tagName === 'a') {
+    if ($el.is('a')) {
       const href = $el.attr('href');
       const text = $el.text().replace(/\s+/g, ' ').trim();
       if (!href || !text) return;
