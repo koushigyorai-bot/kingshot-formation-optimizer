@@ -6,7 +6,7 @@ import { useStore } from '@/lib/client/store';
 import { heroById } from '@/lib/master';
 import { EVENT_RULES, presetFor } from '@/lib/master/events';
 import { DEFAULT_REQUEST, listAssumptions, optimize } from '@/lib/calculator';
-import type { EventType, FormationResult, HeroMaster, OptimizeRequest, OptimizeResult, TroopRatio } from '@/lib/types';
+import type { EffectStat, EventType, FormationResult, HeroContribution, HeroMaster, OptimizeRequest, OptimizeResult, TroopRatio } from '@/lib/types';
 import { TROOP_TYPES } from '@/lib/types';
 import { GenBadge, HeroPortrait, Notice, SectionTitle, SourceLink, StatusBadge, Toggle, TROOP_CLASS, TROOP_LABEL, TroopChip } from '@/components/ui';
 
@@ -248,6 +248,7 @@ function ResultCard({
         </button>
         {open && (
           <div className="mt-2 grid gap-4 pb-2 text-sm md:grid-cols-2">
+            {r.score.heroContrib && r.score.heroContrib.length > 0 && <HeroContribTable contrib={r.score.heroContrib} heroes={heroes} />}
             <table className="w-full text-left">
               <tbody className="[&_td]:py-0.5">
                 <tr>
@@ -336,6 +337,76 @@ function ResultCard({
         )}
       </div>
     </li>
+  );
+}
+
+const STAT_LABEL: Partial<Record<EffectStat, string>> = {
+  lethality: '殺傷力',
+  squadAttack: '部隊攻撃',
+  squadDefense: '部隊防御',
+  squadHealth: '部隊HP',
+  damageUp: '与ダメ（期待値）',
+  rallyAttack: '集結攻撃',
+  damageTakenDown: '被ダメ減',
+  enemyAttackDown: '敵攻撃低下',
+  enemyDamageTakenUp: '敵被ダメ増',
+  critRate: '会心率',
+  critDamage: '会心ダメ',
+  heroAttack: '英雄攻撃',
+  heroDefense: '英雄防御',
+  heroHealth: '英雄HP',
+  skillDamage: 'スキル倍率',
+  heal: '回復',
+  other: 'その他',
+};
+
+function HeroContribTable({ contrib, heroes }: { contrib: HeroContribution[]; heroes: Map<string, HeroMaster> }) {
+  return (
+    <div className="md:col-span-2">
+      <p className="field-label">英雄ごとの寄与（入力したレベル・星がどう効いたか）</p>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] text-left text-xs">
+          <thead className="text-ink-mute">
+            <tr>
+              <th className="py-1">英雄</th>
+              <th>Lv / ★</th>
+              <th>ステータスの寄与</th>
+              <th>効いたスキル</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contrib.map((c) => {
+              const h = heroes.get(c.heroId);
+              return (
+                <tr key={c.heroId} className="border-t border-parchment-line align-top">
+                  <td className="py-1 font-semibold">{h?.name ?? c.heroId}</td>
+                  <td className="font-mono">
+                    {c.level} / {c.stars}
+                  </td>
+                  <td>
+                    {c.statText}
+                    {c.estimatedStats && <span className="chip ml-1 bg-stone-200 text-stone-700">推定値</span>}
+                  </td>
+                  <td>
+                    {c.missingSkills ? (
+                      <span className="chip bg-cav-soft text-cav" title="データ更新でスキルの数値を取得すると反映されます">スキル未取得（0 扱い）</span>
+                    ) : c.skills.length ? (
+                      c.skills.map((sk, i) => (
+                        <div key={i}>
+                          {sk.skill}: {STAT_LABEL[sk.stat] ?? sk.stat} +{Number(sk.value.toFixed(2))}%
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-ink-mute">このイベントで効くスキルなし（またはスキル Lv0）</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
