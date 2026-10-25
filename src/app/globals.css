@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-parchment text-ink font-sans antialiased;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(161, 98, 7, 0.06), transparent 40%),
+    radial-gradient(circle at 85% 100%, rgba(28, 25, 23, 0.04), transparent 45%);
+  min-height: 100vh;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-xl border border-parchment-line bg-white/80 shadow-[0_1px_0_rgba(0,0,0,0.03)];
+  }
+  .field-label {
+    @apply mb-1 block text-xs font-medium text-ink-soft;
+  }
+  .input {
+    @apply w-full rounded-md border border-parchment-line bg-white px-2.5 py-1.5 text-sm text-ink outline-none transition
+      focus:border-crown focus:ring-2 focus:ring-crown/20 disabled:bg-parchment-deep disabled:text-ink-mute;
+  }
+  .input-error {
+    @apply border-cav focus:border-cav focus:ring-cav/20;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-ink text-parchment hover:bg-ink-soft;
+  }
+  .btn-gold {
+    @apply btn bg-crown text-white hover:bg-crown-deep;
+  }
+  .btn-ghost {
+    @apply btn border border-parchment-line bg-white text-ink hover:bg-parchment-deep;
+  }
+  .btn-danger {
+    @apply btn border border-cav/40 bg-white text-cav hover:bg-cav-soft;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none;
+  }
+  .display {
+    font-family: 'Cinzel', Georgia, serif;
+    letter-spacing: 0.02em;
+  }
+}

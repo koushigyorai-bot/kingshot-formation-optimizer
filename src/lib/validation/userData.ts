@@ -1,0 +1,241 @@
+import {
+  HERO_GEAR_SLOTS,
+  LORD_GEAR_SLOTS,
+  TROOP_TYPES,
+  type LordGear,
+  type OwnedHero,
+  type StatBlock,
+  type TroopType,
+  type UserBuffs,
+  type UserData,
+} from '../types';
+import { checkValue, clampValue, type LimitKey } from './limits';
+
+/* ------------------------------------------------------------------ */
+/* 既定値                                                              */
+/* ------------------------------------------------------------------ */
+
+const zeroStats = (): StatBlock => ({ attack: 0, defense: 0, lethality: 0, health: 0 });
+const perTroop = <T>(make: () => T): Record<TroopType, T> => ({ infantry: make(), cavalry: make(), archer: make() });
+
+export function createDefaultOwnedHero(heroId: string): OwnedHero {
+  return {
+    heroId,
+    owned: false,
+    level: 1,
+    stars: 0,
+    awakened: false,
+    gear: Array.from({ length: HERO_GEAR_SLOTS }, () => ({ level: 0, mastery: 0 })),
+    expeditionSkills: [1, 1, 1],
+    conquestSkills: [1, 1, 1],
+    widget: { owned: false, level: 0 },
+  };
+}
+
+const DEFAULT_LORD_GEAR_TROOPS: TroopType[] = ['infantry', 'infantry', 'cavalry', 'cavalry', 'archer', 'archer'];
+
+export function createDefaultLordGear(): LordGear {
+  return {
+    slots: Array.from({ length: LORD_GEAR_SLOTS }, (_, i) => ({ level: 0, polish: 0, troop: DEFAULT_LORD_GEAR_TROOPS[i] ?? 'infantry' })),
+    setBonus: zeroStats(),
+  };
+}
+
+export function createDefaultBuffs(): UserBuffs {
+  return {
+    research: perTroop(zeroStats),
+    governorSkills: zeroStats(),
+    vipLevel: 0,
+    reportOverride: { enabled: false, stats: perTroop(zeroStats) },
+  };
+}
+
+export function createDefaultUserData(heroIds: string[]): UserData {
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    lordGear: createDefaultLordGear(),
+    heroes: Object.fromEntries(heroIds.map((id) => [id, createDefaultOwnedHero(id)])),
+    troops: {
+      infantry: { tier: 1, count: 0 },
+      cavalry: { tier: 1, count: 0 },
+      archer: { tier: 1, count: 0 },
+      barracksLevel: 1,
+    },
+    buffs: createDefaultBuffs(),
+    settings: { serverGeneration: 1, marchCapacity: 100_000 },
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* 検証                                                                */
+/* ------------------------------------------------------------------ */
+
+export interface FieldError {
+  path: string;
+  message: string;
+}
+
+export type ValidationResult = { ok: true; data: UserData; warnings: FieldError[] } | { ok: false; errors: FieldError[] };
+
+type Obj = Record<string, unknown>;
+const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/**
+ * インポートした JSON を検証し、正規化した UserData を返す。
+ * - 構造が壊れている → エラー（読み込まない）
+ * - 範囲外の数値 → 範囲内に丸めて warnings に記録
+ * - 未知の英雄 ID → 保持する（マスターデータ更新で追加される可能性があるため）
+ */
+export function validateUserData(input: unknown, knownHeroIds: string[]): ValidationResult {
+  const errors: FieldError[] = [];
+  const warnings: FieldError[] = [];
+
+  if (!isObj(input)) return { ok: false, errors: [{ path: '$', message: 'JSON オブジェクトではありません' }] };
+  if (input.version !== 1) errors.push({ path: 'version', message: `未対応のバージョンです（${String(input.version)}）` });
+  if (!isObj(input.heroes)) errors.push({ path: 'heroes', message: 'heroes がありません' });
+  if (!isObj(input.troops)) errors.push({ path: 'troops', message: 'troops がありません' });
+  if (errors.length) return { ok: false, errors };
+
+  const base = createDefaultUserData(knownHeroIds);
+
+  const num = (path: string, key: LimitKey, value: unknown, fallback: number): number => {
+    const err = checkValue(key, value);
+    if (err) warnings.push({ path, message: `${err}（${String(value)} → 補正）` });
+    return clampValue(key, value, fallback);
+  };
+  const pct = (path: string, value: unknown): number => num(path, 'percent', value ?? 0, 0);
+  const stats = (path: string, v: unknown): StatBlock => {
+    const o = isObj(v) ? v : {};
+    return {
+      attack: pct(`${path}.attack`, o.attack),
+      defense: pct(`${path}.defense`, o.defense),
+      lethality: pct(`${path}.lethality`, o.lethality),
+      health: pct(`${path}.health`, o.health),
+    };
+  };
+  const troopOf = (v: unknown, fallback: TroopType): TroopType =>
+    typeof v === 'string' && (TROOP_TYPES as readonly string[]).includes(v) ? (v as TroopType) : fallback;
+
+  // 英雄
+  const heroes: Record<string, OwnedHero> = { ...base.heroes };
+  for (const [id, raw] of Object.entries(input.heroes as Obj)) {
+    if (!isObj(raw)) {
+      warnings.push({ path: `heroes.${id}`, message: '形式が不正なため初期値に戻しました' });
+      continue;
+    }
+    const d = createDefaultOwnedHero(id);
+    const p = `heroes.${id}`;
+    const gearRaw = Array.isArray(raw.gear) ? raw.gear : [];
+    heroes[id] = {
+      heroId: id,
+      owned: raw.owned === true,
+      level: num(`${p}.level`, 'heroLevel', raw.level ?? d.level, d.level),
+      stars: num(`${p}.stars`, 'heroStars', raw.stars ?? d.stars, d.stars),
+      awakened: raw.awakened === true,
+      gear: Array.from({ length: HERO_GEAR_SLOTS }, (_, i) => {
+        const g = gearRaw[i];
+        // 旧形式（数値のみ）も受け付ける
+        if (typeof g === 'number') return { level: num(`${p}.gear[${i}]`, 'heroGearLevel', g, 0), mastery: 0 };
+        const go = isObj(g) ? g : {};
+        return {
+          level: num(`${p}.gear[${i}].level`, 'heroGearLevel', go.level ?? 0, 0),
+          mastery: num(`${p}.gear[${i}].mastery`, 'heroGearMastery', go.mastery ?? 0, 0),
+        };
+      }),
+      expeditionSkills: [0, 1, 2].map((i) =>
+        num(`${p}.expeditionSkills[${i}]`, 'skillLevel', (raw.expeditionSkills as unknown[] | undefined)?.[i] ?? 1, 1),
+      ),
+      conquestSkills: [0, 1, 2].map((i) =>
+        num(`${p}.conquestSkills[${i}]`, 'skillLevel', (raw.conquestSkills as unknown[] | undefined)?.[i] ?? 1, 1),
+      ),
+      widget: {
+        owned: isObj(raw.widget) && raw.widget.owned === true,
+        level: num(`${p}.widget.level`, 'widgetLevel', isObj(raw.widget) ? (raw.widget.level ?? 0) : 0, 0),
+      },
+    };
+    if (!knownHeroIds.includes(id)) warnings.push({ path: p, message: '未知の英雄 ID です（マスターデータ更新後に表示されます）' });
+  }
+
+  // 領主装備
+  const lgRaw = isObj(input.lordGear) ? input.lordGear : {};
+  const slotsRaw = Array.isArray(lgRaw.slots) ? lgRaw.slots : [];
+  const lordGear: LordGear = {
+    slots: base.lordGear.slots.map((d, i) => {
+      const s = isObj(slotsRaw[i]) ? (slotsRaw[i] as Obj) : {};
+      return {
+        level: num(`lordGear.slots[${i}].level`, 'lordGearLevel', s.level ?? 0, 0),
+        polish: num(`lordGear.slots[${i}].polish`, 'lordGearPolish', s.polish ?? 0, 0),
+        troop: troopOf(s.troop, d.troop),
+      };
+    }),
+    setBonus: stats('lordGear.setBonus', lgRaw.setBonus),
+  };
+
+  // 兵士
+  const tr = input.troops as Obj;
+  const troops = {
+    ...Object.fromEntries(
+      TROOP_TYPES.map((t) => {
+        const o = isObj(tr[t]) ? (tr[t] as Obj) : {};
+        return [t, { tier: num(`troops.${t}.tier`, 'troopTier', o.tier ?? 1, 1), count: num(`troops.${t}.count`, 'troopCount', o.count ?? 0, 0) }];
+      }),
+    ),
+    barracksLevel: num('troops.barracksLevel', 'barracksLevel', tr.barracksLevel ?? 1, 1),
+  } as UserData['troops'];
+
+  // バフ
+  const bf = isObj(input.buffs) ? input.buffs : {};
+  const research = isObj(bf.research) ? bf.research : {};
+  const ro = isObj(bf.reportOverride) ? bf.reportOverride : {};
+  const roStats = isObj(ro.stats) ? ro.stats : {};
+  const buffs: UserBuffs = {
+    research: Object.fromEntries(TROOP_TYPES.map((t) => [t, stats(`buffs.research.${t}`, research[t])])) as Record<TroopType, StatBlock>,
+    governorSkills: stats('buffs.governorSkills', bf.governorSkills),
+    vipLevel: num('buffs.vipLevel', 'vipLevel', bf.vipLevel ?? 0, 0),
+    reportOverride: {
+      enabled: ro.enabled === true,
+      stats: Object.fromEntries(TROOP_TYPES.map((t) => [t, stats(`buffs.reportOverride.${t}`, roStats[t])])) as Record<TroopType, StatBlock>,
+    },
+  };
+
+  const st = isObj(input.settings) ? input.settings : {};
+  const settings = {
+    serverGeneration: num('settings.serverGeneration', 'serverGeneration', st.serverGeneration ?? 1, 1),
+    marchCapacity: num('settings.marchCapacity', 'marchCapacity', st.marchCapacity ?? 100_000, 100_000),
+  };
+
+  return {
+    ok: true,
+    warnings,
+    data: {
+      version: 1,
+      updatedAt: typeof input.updatedAt === 'string' ? input.updatedAt : new Date().toISOString(),
+      lordGear,
+      heroes,
+      troops,
+      buffs,
+      settings,
+    },
+  };
+}
+
+/** フォーム用: 1 人の英雄の入力エラーを項目ごとに返す */
+export function validateOwnedHero(h: OwnedHero): Record<string, string> {
+  const out: Record<string, string> = {};
+  const add = (k: string, key: LimitKey, v: unknown) => {
+    const e = checkValue(key, v);
+    if (e) out[k] = e;
+  };
+  add('level', 'heroLevel', h.level);
+  add('stars', 'heroStars', h.stars);
+  h.gear.forEach((g, i) => {
+    add(`gear.${i}.level`, 'heroGearLevel', g.level);
+    add(`gear.${i}.mastery`, 'heroGearMastery', g.mastery);
+  });
+  h.expeditionSkills.forEach((v, i) => add(`expeditionSkills.${i}`, 'skillLevel', v));
+  h.conquestSkills.forEach((v, i) => add(`conquestSkills.${i}`, 'skillLevel', v));
+  add('widget.level', 'widgetLevel', h.widget.level);
+  if (h.widget.level > 0 && !h.widget.owned) out['widget.level'] = 'ウィジェット未所持の場合はレベル 0 にしてください';
+  return out;
+}
