@@ -126,3 +126,13 @@ test('比率・3 人組・ティアの抽出', () => {
     ['amadeus:S', 'petra:S', 'zoe:A', 'rosa:A'],
   );
 });
+
+test('"Squads\' total Attack" の表記（あまね Tri-Phalanx）と戦闘外の効果', () => {
+  const tri = parseSkillDescription("Amane's trademark formation increases all Squads' total Attack by 5%/10%/15%/20%/25%.");
+  assert.deepEqual(tri.map((e) => e.stat), ['squadAttack']);
+  assert.equal(effectValueAt(tri[0]!, 5), 25);
+  assert.equal(parseSkillDescription("increasing Squads' total Defense by 5%/10%/15%/20%/25%.")[0]?.stat, 'squadDefense');
+  assert.equal(parseSkillDescription("Increases all Squads' total Lethality by 5%/10%/15%/20%/25%.")[0]?.stat, 'lethality');
+  // 診療所の治療速度は戦闘の回復ではない
+  assert.equal(parseSkillDescription('increases Infirmary Healing Speed by 10%/20%/30%/40%/50%.')[0]?.stat, 'other');
+});
