@@ -25,8 +25,6 @@ export interface CalcConfig {
   awakeningBonus: Coefficient;
   heroGearPerLevel: Coefficient; // 強化 1 レベルあたり英雄ステータス +%
   heroGearPerMastery: Coefficient; // マスタリー 1 レベルあたり +%
-  lordGearPerLevel: Coefficient; // 領主装備 1 レベルあたり兵種ステータス +%
-  lordGearPerPolish: Coefficient; // 研磨 1 ポイントあたり +%
   vipAttackPerLevel: Coefficient;
   counterBonus: Coefficient; // 兵種相性の有利・不利の幅
   bearRangedStrike: Coefficient; // 熊（歩兵扱い）に対する弓兵ボーナス
@@ -46,10 +44,8 @@ export const DEFAULT_CONFIG: CalcConfig = {
   levelFactorMin: { value: 0.25, label: 'レベル補正（Lv1 時点の倍率）', assumption: true, note: 'Lv80 で 1.0。間は線形補間' },
   starFactorPerStar: { value: 0.08, label: '星補正（星 1 つあたり）', assumption: true },
   awakeningBonus: { value: 0.05, label: '覚醒ボーナス', assumption: true },
-  heroGearPerLevel: { value: 0.05, label: '英雄装備 強化 1Lv あたり +%', assumption: true, note: '公式 Wiki は「強化で Conquest/Expedition ステータスが上がる」とのみ記載' },
-  heroGearPerMastery: { value: 0.5, label: '英雄装備 マスタリー 1Lv あたり +%', assumption: true, note: '公式 Wiki はマスタリーを乗算の強化と説明。係数は未公開' },
-  lordGearPerLevel: { value: 0.3, label: '領主装備 1Lv あたり兵種ステータス +%', assumption: true },
-  lordGearPerPolish: { value: 0.1, label: '研磨 1pt あたり +%', assumption: true },
+  heroGearPerLevel: { value: 0.05, label: '英雄装備 練磨 1Lv あたり +%', assumption: true, note: '公式 Wiki は「練磨（強化）で Conquest/Expedition ステータスが上がる」とのみ記載' },
+  heroGearPerMastery: { value: 0.5, label: '英雄装備 精錬鍛造 1Lv あたり +%', assumption: true, note: '公式 Wiki は精錬鍛造（マスタリー）を乗算の強化と説明。係数は未公開' },
   vipAttackPerLevel: {
     value: 0,
     label: 'VIP 1Lv あたり攻撃 +%',

@@ -55,7 +55,7 @@ export function heroGrowth(o: OwnedHero, cfg: CalcConfig = DEFAULT_CONFIG): numb
   return levelFactor(o.level, cfg) * starFactor(o.stars, cfg) * (o.awakened ? 1 + cfg.awakeningBonus.value : 1);
 }
 
-/** 英雄装備の倍率（1 + Σ強化 + Σマスタリー） */
+/** 英雄装備の倍率（1 + Σ練磨 + Σ精錬鍛造） */
 export function heroGearFactor(o: OwnedHero, cfg: CalcConfig = DEFAULT_CONFIG): number {
   const pct = o.gear.reduce((s, g) => s + g.level * cfg.heroGearPerLevel.value + g.mastery * cfg.heroGearPerMastery.value, 0);
   return 1 + pct / 100;
@@ -75,26 +75,31 @@ export function troopBase(t: TroopType, tier: number, cfg: CalcConfig = DEFAULT_
 /**
  * 兵種ごとのステータス補正（%）。
  * 戦闘レポート上書きが有効ならその値をそのまま使い、
- * 無効なら研究 + 知事スキル + VIP + 領主装備 を合算する。
+ * 無効なら研究 + 知事スキル + VIP + 領主装備（部位ごとの入力値 + セット効果）を合算する。
  */
-export function troopStatBonus(user: UserData, t: TroopType, cfg: CalcConfig = DEFAULT_CONFIG): StatBlock & { lordGear: number } {
+export function troopStatBonus(user: UserData, t: TroopType, cfg: CalcConfig = DEFAULT_CONFIG): StatBlock {
   const ro = user.buffs.reportOverride;
-  if (ro.enabled) return { ...ro.stats[t], lordGear: 0 };
+  if (ro.enabled) return { ...ro.stats[t] };
 
   const r = user.buffs.research[t];
   const g = user.buffs.governorSkills;
   const vip = user.buffs.vipLevel * cfg.vipAttackPerLevel.value;
   const lg = user.lordGear;
-  const lordPct = lg.slots
+  // 領主装備: 対応兵種の部位の値（%）をそのまま合算
+  const gear = lg.slots
     .filter((s) => s.troop === t)
-    .reduce((sum, s) => sum + s.level * cfg.lordGearPerLevel.value + s.polish * cfg.lordGearPerPolish.value, 0);
+    .reduce((acc, s) => ({ attack: acc.attack + s.attack, defense: acc.defense + s.defense, lethality: acc.lethality + s.lethality, health: acc.health + s.health }), {
+      attack: 0,
+      defense: 0,
+      lethality: 0,
+      health: 0,
+    });
 
   return {
-    attack: r.attack + g.attack + vip + lg.setBonus.attack,
-    defense: r.defense + g.defense + lg.setBonus.defense,
-    lethality: r.lethality + g.lethality + lg.setBonus.lethality,
-    health: r.health + g.health + lg.setBonus.health,
-    lordGear: lordPct,
+    attack: r.attack + g.attack + vip + gear.attack + lg.setBonus.attack,
+    defense: r.defense + g.defense + gear.defense + lg.setBonus.defense,
+    lethality: r.lethality + g.lethality + gear.lethality + lg.setBonus.lethality,
+    health: r.health + g.health + gear.health + lg.setBonus.health,
   };
 }
 
@@ -256,7 +261,7 @@ export function precomputeExpedition(
     }
 
     // 基礎戦闘力（兵 1 あたり）: 兵の攻撃 × (1 + 英雄% + 領主装備% + 研究等%)
-    const atkPct = heroAtkPct + bonus.lordGear + bonus.attack;
+    const atkPct = heroAtkPct + bonus.attack;
     const unitAttack = tb.attack * (1 + atkPct / 100);
     base[t] = unitAttack;
 
@@ -274,7 +279,7 @@ export function precomputeExpedition(
 
     // 生存側: 兵 1 あたりの実効 HP
     const hp = tb.health * (1 + (bonus.health + troopStat(skills, t, 'squadHealth')) / 100);
-    const def = 1 + (heroDefPct + bonus.defense + bonus.lordGear + troopStat(skills, t, 'squadDefense')) / 100;
+    const def = 1 + (heroDefPct + bonus.defense + troopStat(skills, t, 'squadDefense')) / 100;
     const cap = cfg.maxDamageReduction.value;
     const dtd = Math.min(cap, troopStat(skills, t, 'damageTakenDown') / 100);
     const ead = Math.min(cap, get(skills.all, 'enemyAttackDown') / 100);
