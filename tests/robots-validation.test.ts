@@ -73,3 +73,13 @@ test('LocalStorage repository（メモリ実装で検証）', async () => {
   await repo.clear();
   assert.equal(store.getItem(USER_DATA_KEY), null);
 });
+
+test('旧形式（レベル・研磨値）の領主装備は 0 にして警告', () => {
+  const d = createDefaultUserData(ids) as unknown as Record<string, any>;
+  d.lordGear.slots = d.lordGear.slots.map((s: any) => ({ troop: s.troop, level: 50, polish: 20 }));
+  const r = validateUserData(d, ids);
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.deepEqual(r.data.lordGear.slots[0], { troop: 'cavalry', attack: 0, defense: 0, lethality: 0, health: 0 });
+  assert.ok(r.warnings.some((w) => w.path === 'lordGear.slots'));
+});

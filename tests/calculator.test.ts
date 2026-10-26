@@ -174,3 +174,15 @@ test('マージ: 公式値が推定値を上書きし、食い違いを記録、
   assert.equal(nh?.generation, 9);
   assert.equal(nh?.expedition.attack, 900);
 });
+
+test('領主装備: 対応兵種にだけ % が加算され、初期の兵種は 騎・騎・歩・歩・弓・弓', async () => {
+  const { troopStatBonus } = await import('../src/lib/calculator');
+  const u = account([]);
+  assert.deepEqual(u.lordGear.slots.map((s) => s.troop), ['cavalry', 'cavalry', 'infantry', 'infantry', 'archer', 'archer']);
+  u.lordGear.slots[0] = { troop: 'cavalry', attack: 10, defense: 2, lethality: 5, health: 1 };
+  u.lordGear.slots[1] = { troop: 'cavalry', attack: 2.5, defense: 0, lethality: 0, health: 0 };
+  u.lordGear.slots[4] = { troop: 'archer', attack: 0, defense: 0, lethality: 7, health: 0 };
+  assert.deepEqual(troopStatBonus(u, 'cavalry'), { attack: 12.5, defense: 2, lethality: 5, health: 1 });
+  assert.deepEqual(troopStatBonus(u, 'archer'), { attack: 0, defense: 0, lethality: 7, health: 0 });
+  assert.deepEqual(troopStatBonus(u, 'infantry'), { attack: 0, defense: 0, lethality: 0, health: 0 });
+});
