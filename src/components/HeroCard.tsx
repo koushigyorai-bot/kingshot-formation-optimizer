@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { HeroMaster, OwnedHero } from '@/lib/types';
-import { HERO_GEAR_SLOTS } from '@/lib/types';
+import { HERO_GEAR_SLOT_LABELS, HERO_GEAR_SLOTS } from '@/lib/types';
 import { validateOwnedHero } from '@/lib/validation/userData';
 import { GenBadge, HeroPortrait, NumberField, StatusBadge, Toggle, TroopChip } from './ui';
 
@@ -121,15 +121,15 @@ export function HeroCard({ hero, owned, onChange }: { hero: HeroMaster; owned: O
           </fieldset>
 
           <fieldset>
-            <legend className="field-label">英雄装備（強化 Lv 0〜200 / マスタリー 0〜20）</legend>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
+            <legend className="field-label">英雄装備（精錬鍛造 0〜20 / 練磨 Lv 0〜200）</legend>
+            <div className="grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2">
               {Array.from({ length: HERO_GEAR_SLOTS }, (_, i) => {
                 const g = owned.gear[i] ?? { level: 0, mastery: 0 };
                 const set = (patch: Partial<typeof g>) => onChange({ gear: owned.gear.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
                 return (
                   <div key={i} className="grid grid-cols-2 gap-1 rounded-md border border-parchment-line bg-white p-1.5">
-                    <NumberField compact label={`部位${i + 1} 強化`} limit="heroGearLevel" value={g.level} onChange={(v) => set({ level: v })} />
-                    <NumberField compact label="マスタリー" limit="heroGearMastery" value={g.mastery} onChange={(v) => set({ mastery: v })} />
+                    <NumberField compact label={`${HERO_GEAR_SLOT_LABELS[i] ?? `部位${i + 1}`} 精錬鍛造`} limit="heroGearMastery" value={g.mastery} onChange={(v) => set({ mastery: v })} />
+                    <NumberField compact label="練磨" limit="heroGearLevel" value={g.level} onChange={(v) => set({ level: v })} />
                   </div>
                 );
               })}
