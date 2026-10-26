@@ -136,6 +136,13 @@ function StatInputs({ value, onChange, prefix }: { value: StatBlock; onChange: (
   );
 }
 
+const LORD_GEAR_STATS: Array<[keyof StatBlock, string]> = [
+  ['attack', '攻撃力'],
+  ['defense', '防御力'],
+  ['lethality', '殺傷力'],
+  ['health', 'HP'],
+];
+
 function LordGearTab() {
   const { user, setUser } = useStore();
   const lg = user.lordGear;
@@ -143,8 +150,8 @@ function LordGearTab() {
     setUser((u) => ({ ...u, lordGear: { ...u.lordGear, slots: u.lordGear.slots.map((s, j) => (j === i ? { ...s, ...patch } : s)) } }));
   return (
     <div className="space-y-4">
-      <Notice tone="warn">
-        領主装備の段階ごとの効果量は公開情報で確認できなかったため、レベル・研磨値は仮の係数で換算しています。ゲーム内の「戦闘レポート」に出る最終ステータスを「領主バフ・設定」タブで入力すると、こちらより正確に計算できます。
+      <Notice>
+        ゲームの各装備の詳細画面に表示される「攻撃力・防御力・殺傷力・HP」の % をそのまま入力してください。選んだ兵種（例: 騎兵）のステータスに加算して計算します。
       </Notice>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {lg.slots.map((s, i) => (
@@ -154,14 +161,23 @@ function LordGearTab() {
               <select className="input w-auto" value={s.troop} onChange={(e) => setSlot(i, { troop: e.target.value as TroopType })} aria-label={`部位${i + 1}の兵種`}>
                 {TROOP_TYPES.map((t) => (
                   <option key={t} value={t}>
-                    {TROOP_LABEL[t]}強化
+                    {TROOP_LABEL[t]}
                   </option>
                 ))}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <NumberField label="レベル" limit="lordGearLevel" value={s.level} onChange={(v) => setSlot(i, { level: v })} />
-              <NumberField label="研磨値" limit="lordGearPolish" value={s.polish} onChange={(v) => setSlot(i, { polish: v })} />
+              {LORD_GEAR_STATS.map(([k, label]) => (
+                <NumberField
+                  key={k}
+                  label={`${TROOP_LABEL[s.troop]}${label}`}
+                  suffix="%"
+                  step={0.01}
+                  limit="percent"
+                  value={s[k]}
+                  onChange={(v) => setSlot(i, { [k]: v })}
+                />
+              ))}
             </div>
           </div>
         ))}
