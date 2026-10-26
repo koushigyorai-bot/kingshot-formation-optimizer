@@ -195,12 +195,20 @@ export interface DataConflict {
 /* ------------------------------------------------------------------ */
 
 export const LORD_GEAR_SLOTS = 6;
-export const HERO_GEAR_SLOTS = 6;
+/** 英雄装備は 頭・手・胴・足 の 4 部位（ゲーム内表記。攻略サイトの Helmet / Gloves / Chest / Boots） */
+export const HERO_GEAR_SLOTS = 4;
+export const HERO_GEAR_SLOT_LABELS = ['頭', '手', '胴', '足'] as const;
 
+/**
+ * 領主装備 1 部位。ゲームの装備詳細に表示される、対応兵種へのバフ値（%）をそのまま入力する。
+ * 例: 騎兵用の装備なら「騎兵攻撃力 +12.5%」→ troop = 'cavalry', attack = 12.5
+ */
 export interface LordGearSlot {
-  level: number; // 0〜100（0 = 未装備）
-  polish: number; // 研磨値 0〜100
-  troop: TroopType; // この部位が強化する兵種
+  troop: TroopType; // この部位がバフする兵種
+  attack: number; // 攻撃力 %
+  defense: number; // 防御力 %
+  lethality: number; // 殺傷力 %
+  health: number; // HP %
 }
 
 export interface LordGear {
@@ -210,8 +218,8 @@ export interface LordGear {
 }
 
 export interface HeroGearSlot {
-  level: number; // 強化レベル 0〜200（0 = 未装備）
-  mastery: number; // マスタリー鍛造 0〜20
+  level: number; // 練磨（強化）レベル 0〜200（0 = 未装備）
+  mastery: number; // 精錬鍛造（マスタリー鍛造）0〜20
 }
 
 export interface OwnedHero {
@@ -221,8 +229,9 @@ export interface OwnedHero {
   stars: number; // 0〜5（赤星）
   awakened: boolean;
   /**
-   * 英雄装備 6 部位。仕様書は Lv1〜30 だったが、公式 Wiki では強化 Lv100 到達で
-   * レジェンド昇格が解放されるため、強化 0〜200・マスタリー鍛造 0〜20 を受け付ける。
+   * 英雄装備 4 部位（頭・手・胴・足）。仕様書は 6 部位 × Lv1〜30 だったが、
+   * ゲーム内は 4 部位で、練磨は品質ごとに上限が Lv100（神話）/ Lv200（赤）まであるため
+   * 練磨 0〜200・精錬鍛造 0〜20 を受け付ける。
    */
   gear: HeroGearSlot[];
   expeditionSkills: number[]; // 3 枠 × 0〜5（0 = 未解放）
