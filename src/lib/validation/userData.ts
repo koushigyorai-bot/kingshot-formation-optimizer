@@ -32,11 +32,12 @@ export function createDefaultOwnedHero(heroId: string): OwnedHero {
   };
 }
 
-const DEFAULT_LORD_GEAR_TROOPS: TroopType[] = ['infantry', 'infantry', 'cavalry', 'cavalry', 'archer', 'archer'];
+/** ゲーム画面の並び順: 部位 1・2 = 騎兵、3・4 = 歩兵、5・6 = 弓兵 */
+const DEFAULT_LORD_GEAR_TROOPS: TroopType[] = ['cavalry', 'cavalry', 'infantry', 'infantry', 'archer', 'archer'];
 
 export function createDefaultLordGear(): LordGear {
   return {
-    slots: Array.from({ length: LORD_GEAR_SLOTS }, (_, i) => ({ level: 0, polish: 0, troop: DEFAULT_LORD_GEAR_TROOPS[i] ?? 'infantry' })),
+    slots: Array.from({ length: LORD_GEAR_SLOTS }, (_, i) => ({ troop: DEFAULT_LORD_GEAR_TROOPS[i] ?? 'infantry', ...zeroStats() })),
     setBonus: zeroStats(),
   };
 }
@@ -160,13 +161,15 @@ export function validateUserData(input: unknown, knownHeroIds: string[]): Valida
   // 領主装備
   const lgRaw = isObj(input.lordGear) ? input.lordGear : {};
   const slotsRaw = Array.isArray(lgRaw.slots) ? lgRaw.slots : [];
+  if (slotsRaw.some((x) => isObj(x) && ('level' in x || 'polish' in x) && !('attack' in x))) {
+    warnings.push({ path: 'lordGear.slots', message: '旧形式（レベル・研磨値）の領主装備は引き継げないため、0 にしました。攻撃力・防御力・殺傷力・HP を入力し直してください' });
+  }
   const lordGear: LordGear = {
     slots: base.lordGear.slots.map((d, i) => {
       const s = isObj(slotsRaw[i]) ? (slotsRaw[i] as Obj) : {};
       return {
-        level: num(`lordGear.slots[${i}].level`, 'lordGearLevel', s.level ?? 0, 0),
-        polish: num(`lordGear.slots[${i}].polish`, 'lordGearPolish', s.polish ?? 0, 0),
         troop: troopOf(s.troop, d.troop),
+        ...stats(`lordGear.slots[${i}]`, s),
       };
     }),
     setBonus: stats('lordGear.setBonus', lgRaw.setBonus),
