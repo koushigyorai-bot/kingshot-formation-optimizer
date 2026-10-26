@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { MasterData, OwnedHero, UserData } from '../types';
-import { mergeMasterData, seedMasterData, type CrawlSnapshot } from '../master';
+import { mergeMasterData, reparseSkills, seedMasterData, type CrawlSnapshot } from '../master';
 import { createRepositories, type Repositories } from '../repository';
 import { createDefaultOwnedHero, createDefaultUserData } from '../validation/userData';
 
@@ -51,7 +51,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // 保存済みマスターの日本語名は、同梱データの表記で上書きする（表記修正を反映するため）
       const seedNames = new Map(seed.heroes.map((h) => [h.id, h.nameJa]));
       const m = savedMaster
-        ? { ...savedMaster, heroes: savedMaster.heroes.map((h) => (seedNames.has(h.id) ? { ...h, nameJa: seedNames.get(h.id) } : h)) }
+        ? reparseSkills({ ...savedMaster, heroes: savedMaster.heroes.map((h) => (seedNames.has(h.id) ? { ...h, nameJa: seedNames.get(h.id) } : h)) })
         : seed;
       setMaster(m);
       if (savedUser) {
@@ -105,7 +105,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const applySnapshot = useCallback(
     async (snap: CrawlSnapshot) => {
       // 毎回シードから重ね直す（過去のクロール結果に引きずられないように）
-      const merged = mergeMasterData(seed, snap);
+      const merged = reparseSkills(mergeMasterData(seed, snap));
       setMaster(merged);
       await repos.current?.master.save(merged);
       setUserState((u) => {
