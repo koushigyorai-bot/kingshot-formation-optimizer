@@ -64,13 +64,15 @@ const RULES: Rule[] = [
   { test: /(damage taken by (the )?(target|enem)|enem[^.]{0,30}damage taken)[^.]{0,30}(increas|amplif)|(amplif|increas)[^.]{0,30}damage taken by (the )?(target|enem)/i, stat: 'enemyDamageTakenUp', scope: 'enemy' },
   { test: /(reduc|decreas|lower)[^.]{0,40}damage taken|damage taken[^.]{0,20}(reduc|decreas)/i, stat: 'damageTakenDown', scope: 'squad' },
   { test: /lethality/i, stat: 'lethality', scope: 'squad' },
-  { test: /(squads?'?|troops'?)\s*(attack)|attack.{0,40}?for all troops|(infantry|cavalry|archer)s?'?\s+attack/i, stat: 'squadAttack', scope: 'squad' },
+  // "Squads' Attack" / "Squads' total Attack" / "Escorts' Attack"（Conquest の護衛兵）
+  { test: /(squads?'?|troops'?|escorts'?)\s*(total\s+)?attack|attack.{0,40}?for all troops|(infantry|cavalry|archer)s?'?\s+attack/i, stat: 'squadAttack', scope: 'squad' },
   { test: /(squads?'?|soldiers|troops'?)\s*[^.]{0,20}health|health for all deployed/i, stat: 'squadHealth', scope: 'squad' },
-  { test: /(squads?'?|troops'?)\s*defen[cs]e/i, stat: 'squadDefense', scope: 'squad' },
+  { test: /(squads?'?|troops'?|escorts'?)\s*(total\s+)?defen[cs]e/i, stat: 'squadDefense', scope: 'squad' },
   { test: /critical (hit )?(rate|chance)/i, stat: 'critRate', scope: 'squad' },
   { test: /critical (hit )?damage/i, stat: 'critDamage', scope: 'squad' },
   { test: /(dealing|deals?|deal)[^.]{0,20}attack\s*[*×x]\s*\d|attack\s*[*×x]\s*\d[^.]{0,40}damage/i, stat: 'skillDamage', scope: 'self' },
-  { test: /(restor|heal)/i, stat: 'heal', scope: 'heroes' },
+  // 診療所（Infirmary）の治療速度は戦闘外の効果なので回復に数えない
+  { test: /(restor|heal)(?![^.]{0,10}speed)/i, stat: 'heal', scope: 'heroes' },
   { test: /damage dealt/i, stat: 'damageUp', scope: 'squad' },
   { test: /increas\w*\s+(his |her |their )?attack/i, stat: 'heroAttack', scope: 'self' },
   { test: /defen[cs]e by/i, stat: 'heroDefense', scope: 'self' },
