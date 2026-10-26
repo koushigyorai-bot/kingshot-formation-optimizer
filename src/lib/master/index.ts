@@ -13,6 +13,7 @@ import type {
   WidgetMaster,
 } from '../types';
 import { buildSeedHeroes } from './heroes';
+import { parseSkillDescription } from '../crawler/parseSkill';
 import { SITE_PROFILES, sitePriority } from './sources';
 
 export { EVENT_RULES, presetFor, COUNTERS } from './events';
@@ -212,6 +213,20 @@ function dedupeBy<T>(xs: T[], key: (x: T) => string): T[] {
 
 function structuredCloneSafe<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
+}
+
+/**
+ * 保存済みのスキル効果を説明文から解析し直す。
+ * パーサーを修正したとき、データ更新をやり直さなくても反映されるようにするため。
+ */
+export function reparseSkills(master: MasterData): MasterData {
+  return {
+    ...master,
+    heroes: master.heroes.map((h) => ({
+      ...h,
+      skills: h.skills.map((s) => ({ ...s, effects: parseSkillDescription(s.description) })),
+    })),
+  };
 }
 
 export function heroById(master: MasterData): Map<string, HeroMaster> {
