@@ -1,9 +1,12 @@
 import type { MasterData, UserData } from '../types';
+import type { CrawlSnapshot } from '../master';
+import { parseSnapshot } from '../master/snapshot';
 import { validateUserData } from '../validation/userData';
 import type { KeyValueStore, MasterDataRepository, UserDataRepository } from './types';
 
 export const USER_DATA_KEY = 'kingshot_user_data_v1';
 export const MASTER_DATA_KEY = 'kingshot_master_data_v1';
+export const CRAWL_SNAPSHOT_KEY = 'kingshot_crawl_snapshot_v1';
 
 /** SSR 中やストレージ無効時に使うメモリ実装 */
 export class MemoryStore implements KeyValueStore {
@@ -91,5 +94,17 @@ export class LocalStorageMasterDataRepository implements MasterDataRepository {
 
   async clear(): Promise<void> {
     this.store.removeItem(MASTER_DATA_KEY);
+    this.store.removeItem(CRAWL_SNAPSHOT_KEY);
+  }
+
+  async loadSnapshot(): Promise<CrawlSnapshot | null> {
+    const raw = this.store.getItem(CRAWL_SNAPSHOT_KEY);
+    if (!raw) return null;
+    const r = parseSnapshot(raw);
+    return r.ok ? r.snapshot : null;
+  }
+
+  async saveSnapshot(snap: CrawlSnapshot): Promise<void> {
+    this.store.setItem(CRAWL_SNAPSHOT_KEY, JSON.stringify(snap));
   }
 }

@@ -1,4 +1,5 @@
 import type { MasterData, UserData } from '../types';
+import type { CrawlSnapshot } from '../master';
 
 /**
  * 保存先を差し替えられるようにするための repository インターフェース。
@@ -20,6 +21,9 @@ export interface MasterDataRepository {
   load(): Promise<MasterData | null>;
   save(data: MasterData): Promise<void>;
   clear(): Promise<void>;
+  /** クロールした生の結果（読み込み時に初期データと重ね直す） */
+  loadSnapshot(): Promise<CrawlSnapshot | null>;
+  saveSnapshot(snap: CrawlSnapshot): Promise<void>;
 }
 
 /** Web Storage の最小インターフェース（テストでは Map 実装を渡す） */
