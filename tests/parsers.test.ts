@@ -136,3 +136,13 @@ test('"Squads\' total Attack" の表記（あまね Tri-Phalanx）と戦闘外�
   // 診療所の治療速度は戦闘の回復ではない
   assert.equal(parseSkillDescription('increases Infirmary Healing Speed by 10%/20%/30%/40%/50%.')[0]?.stat, 'other');
 });
+
+test('ペーラ: 確率発動スキルは期待値、集結攻撃は集結時のみ', () => {
+  const at5 = (t: string) => parseSkillDescription(t).map((e) => [e.stat, effectValueAt(e, 5)]);
+  assert.deepEqual(at5("granting a 10%/20%/30%/40%/50% chance of increasing Squads' Attack by 50%."), [['squadAttack', 25]]);
+  assert.deepEqual(at5("Grants all Squads' Attack a 10%/20%/30%/40%/50% chance of cursing the target, increasing their damage taken by 50%."), [['enemyDamageTakenUp', 25]]);
+  assert.deepEqual(at5('with a 10%/20%/30%/40%/50% chance of reducing damage taken by 50% for all squads.'), [['damageTakenDown', 25]], '被ダメ減も期待値');
+  assert.deepEqual(at5('Petra increases Rally Squad Attack by 5%/7.5%/10%/12.5%/15%.'), [['rallyAttack', 15]]);
+  // 発動率固定・効果量が段階的に上がる書き方
+  assert.deepEqual(at5('has a 50% chance of increasing damage dealt by 10%/20%/30%/40%/50%.'), [['damageUp', 25]]);
+});
