@@ -146,3 +146,15 @@ test('ペーラ: 確率発動スキルは期待値、集結攻撃は集結時の
   // 発動率固定・効果量が段階的に上がる書き方
   assert.deepEqual(at5('has a 50% chance of increasing damage dealt by 10%/20%/30%/40%/50%.'), [['damageUp', 25]]);
 });
+
+test('ヒルデ: 「25% の確率で 120〜200% のダメージ」は与ダメ増の期待値', () => {
+  const at = (t: string, lv: number) => parseSkillDescription(t).map((e) => [e.stat, Number(effectValueAt(e, lv).toFixed(4))]);
+  const elixir = "Hilde's Elixir of Strength gives all squads' attacks a 25% chance of dealing 120%/140%/160%/180%/200% damage.";
+  assert.deepEqual(at(elixir, 3), [['damageUp', 15]], '25% × (160% - 100%) = 15%');
+  assert.deepEqual(at(elixir, 5), [['damageUp', 25]]);
+  // 発動率が段階的に上がる書き方
+  assert.deepEqual(at('Grants all squads a 10%/20%/30%/40%/50% chance to deal 150% damage.', 5), [['damageUp', 25]]);
+  // "Attack by X% and Defense by Y%" の防御は部隊全体
+  const noble = "Hilde's noble path increases the total Squads' Attack by 3%/6%/9%/12%/15% and Defense by 2%/4%/6%/8%/10%.";
+  assert.deepEqual(at(noble, 5), [['squadAttack', 15], ['squadDefense', 10]]);
+});
