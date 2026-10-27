@@ -103,6 +103,22 @@ export function parseSkillDescription(description: string): SkillEffect[] {
   const series = extractSeries(text);
   if (series.length === 0) return [];
 
+  // "X% chance to deal 120%/140%/.../200% damage"（Hilde: Elixir of Strength）
+  // 発動時に通常の Y% のダメージ → 与ダメ増 (Y - 100)% を発動率で期待値化する
+  const chanceIdx0 = text.toLowerCase().indexOf('chance');
+  if (chanceIdx0 >= 0 && /chance[^.]{0,30}?\b(?:to |of )?deal(?:ing|s)?\b/i.test(text) && !/attack\s*[*×x]\s*\d/i.test(text)) {
+    const before = text.slice(0, chanceIdx0);
+    const after = text.slice(chanceIdx0);
+    const chanceSeries = before.match(SERIES_RE) ? series[0]! : null;
+    if (chanceSeries) {
+      const dmg = Number(after.match(/deal\w*\s+(\d+(?:\.\d+)?)%/i)?.[1] ?? 100);
+      return [{ stat: 'damageUp', values: chanceSeries.map(() => Math.max(0, dmg - 100)), chance: chanceSeries, scope: 'squad' }];
+    }
+    const fixedChance = Number(before.match(/(\d+(?:\.\d+)?)%\s*$/)?.[1] ?? 100);
+    const dmgSeries = series[0]!;
+    return [{ stat: 'damageUp', values: dmgSeries.map((d) => Math.max(0, d - 100)), chance: dmgSeries.map(() => fixedChance), scope: 'squad' }];
+  }
+
   const chance = text.match(CHANCE_RE);
   if (chance) {
     const magnitude = Number(chance[3]);
@@ -130,6 +146,11 @@ export function parseSkillDescription(description: string): SkillEffect[] {
     if (!rule.test.test(text)) continue;
     // "damage dealt" は確率型以外でも出るが、被ダメ系と重複しないようにする
     if (rule.stat === 'damageUp' && (matched.has('damageTakenDown') || matched.has('skillDamage'))) continue;
+    // "Squads' Attack by X% and Defense by Y%"（Hilde: Noble Path）→ 防御も部隊全体
+    if (rule.stat === 'heroDefense' && matched.has('squadAttack') && /and defen[cs]e by/i.test(text)) {
+      matched.add('squadDefense');
+      continue;
+    }
     if (rule.stat === 'heroDefense' && (matched.has('squadDefense') || matched.has('heroAttack'))) {
       // "Defense by" が部隊防御の言い換えの場合は二重計上しない
       if (matched.has('squadDefense')) continue;
