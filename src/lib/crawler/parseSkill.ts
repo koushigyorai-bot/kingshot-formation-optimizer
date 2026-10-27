@@ -59,7 +59,7 @@ interface Rule {
 
 /** 上から順に評価。1 文が複数ルールに当たる場合（"Lethality and Health"）は全部採用。 */
 const RULES: Rule[] = [
-  { test: /rally attack/i, stat: 'rallyAttack', scope: 'squad' },
+  { test: /rally (squads?'? )?attack/i, stat: 'rallyAttack', scope: 'squad' },
   { test: /enemy[^.]{0,40}\battack\b[^.]{0,30}(reduc|decreas|lower)|(reduc|decreas|lower)[^.]{0,40}enemy[^.]{0,30}\battack\b/i, stat: 'enemyAttackDown', scope: 'enemy' },
   { test: /(damage taken by (the )?(target|enem)|enem[^.]{0,30}damage taken)[^.]{0,30}(increas|amplif)|(amplif|increas)[^.]{0,30}damage taken by (the )?(target|enem)/i, stat: 'enemyDamageTakenUp', scope: 'enemy' },
   { test: /(reduc|decreas|lower)[^.]{0,40}damage taken|damage taken[^.]{0,20}(reduc|decreas)/i, stat: 'damageTakenDown', scope: 'squad' },
@@ -80,9 +80,23 @@ const RULES: Rule[] = [
 
 /**
  * 確率発動型: "X%/... chance of increasing damage dealt by 50%"
- * 期待値 = 発動率 × 効果量 として damageUp に換算する。
+ *            "X%/... chance of reducing damage taken by 50%"
+ *            "X%/... chance of cursing the target, increasing their damage taken by 50%"
+ * 期待値 = 発動率 × 効果量 に換算する。
  */
-const CHANCE_RE = /chance[^.]{0,60}?(?:increas\w*|boost\w*)[^.]{0,30}?(damage|attack|lethality)[^.]{0,20}?by\s+(\d+(?:\.\d+)?)%/i;
+const CHANCE_RE =
+  /chance[^.]{0,80}?(increas\w*|boost\w*|reduc\w*|decreas\w*|lower\w*)[^.]{0,40}?(damage taken|damage|attack|lethality|health|defen[cs]e)[^.]{0,30}?by\s+(\d+(?:\.\d+)?)%/i;
+
+function chanceStat(verb: string, word: string): EffectStat {
+  const down = /^(reduc|decreas|lower)/i.test(verb);
+  const w = word.toLowerCase();
+  if (w === 'damage taken') return down ? 'damageTakenDown' : 'enemyDamageTakenUp';
+  if (w === 'lethality') return 'lethality';
+  if (w === 'attack') return down ? 'enemyAttackDown' : 'squadAttack';
+  if (w === 'health') return 'squadHealth';
+  if (w.startsWith('defen')) return 'squadDefense';
+  return 'damageUp';
+}
 
 export function parseSkillDescription(description: string): SkillEffect[] {
   const text = description.replace(/\s+/g, ' ').trim();
@@ -90,20 +104,22 @@ export function parseSkillDescription(description: string): SkillEffect[] {
   if (series.length === 0) return [];
 
   const chance = text.match(CHANCE_RE);
-  if (chance && /chance/i.test(text)) {
-    const magnitude = Number(chance[2]);
-    const statWord = (chance[1] ?? '').toLowerCase();
-    const stat: EffectStat =
-      statWord === 'lethality' ? 'lethality' : statWord === 'attack' ? 'squadAttack' : 'damageUp';
-    const chanceSeries = series[0]!;
-    return [
-      {
-        stat,
-        values: chanceSeries.map(() => magnitude),
-        chance: chanceSeries,
-        scope: /all squads|all troops|squads/i.test(text) ? 'squad' : 'self',
-      },
-    ];
+  if (chance) {
+    const magnitude = Number(chance[3]);
+    const stat = chanceStat(chance[1] ?? '', chance[2] ?? '');
+    // 数値列が「発動率」側にあるか「効果量」側にあるかを判定する
+    const chanceIdx = text.toLowerCase().indexOf('chance');
+    const seriesBeforeChance = text.slice(0, chanceIdx).match(SERIES_RE);
+    const chanceSeries = seriesBeforeChance ? series[0]! : null;
+    const scope: SkillEffect['scope'] =
+      stat === 'enemyDamageTakenUp' || stat === 'enemyAttackDown' ? 'enemy' : /all squads|all troops|squads/i.test(text) ? 'squad' : 'self';
+    if (chanceSeries) {
+      return [{ stat, values: chanceSeries.map(() => magnitude), chance: chanceSeries, scope }];
+    }
+    // "50% chance ... by 10%/20%/..." のように効果量が段階的に上がる場合
+    const fixedChance = Number(text.slice(0, chanceIdx).match(/(\d+(?:\.\d+)?)%\s*$/)?.[1] ?? 100);
+    const values = series[0]!;
+    return [{ stat, values, chance: values.map(() => fixedChance), scope }];
   }
 
   const effects: SkillEffect[] = [];
@@ -121,6 +137,8 @@ export function parseSkillDescription(description: string): SkillEffect[] {
     if (rule.stat === 'heroAttack' && (matched.has('squadAttack') || matched.has('skillDamage'))) continue;
     // "Enemy Squads' Attack" を味方の部隊攻撃と誤認しない
     if (rule.stat === 'squadAttack' && matched.has('enemyAttackDown') && !/for all troops/i.test(text)) continue;
+    // "Rally Squad Attack" は集結時のみの効果。通常の部隊攻撃と二重に数えない
+    if (rule.stat === 'squadAttack' && matched.has('rallyAttack')) continue;
     if (rule.stat === 'heal' && matched.size > 0 && !/restor/i.test(text)) continue;
     matched.add(rule.stat);
   }
