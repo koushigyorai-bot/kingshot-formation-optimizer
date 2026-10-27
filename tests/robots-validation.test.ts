@@ -83,3 +83,30 @@ test('旧形式（レベル・研磨値）の領主装備は 0 にして警告',
   assert.deepEqual(r.data.lordGear.slots[0], { troop: 'cavalry', attack: 0, defense: 0, lethality: 0, health: 0 });
   assert.ok(r.warnings.some((w) => w.path === 'lordGear.slots'));
 });
+
+test('データ更新の結果（スナップショット）の書き出し → 読み込み', async () => {
+  const { exportSnapshotJson, parseSnapshot, newerSnapshot } = await import('../src/lib/master/snapshot');
+  const { LocalStorageMasterDataRepository } = await import('../src/lib/repository/localStorage');
+  const snap = {
+    crawledAt: '2026-10-28T01:00:00Z',
+    heroPatches: [{ heroId: 'amane', expedition: { attack: 140.11, defense: 140.11 }, source: { site: 'kingshotwiki.com' as const, reliability: 'official' as const } }],
+    tierLists: [],
+    templates: [],
+    siteReports: [],
+  };
+  const r = parseSnapshot(exportSnapshotJson(snap));
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.equal(r.snapshot.heroPatches[0]?.heroId, 'amane');
+  // 所持状況のファイルを間違えて読み込んだ場合
+  assert.equal(parseSnapshot(JSON.stringify({ app: 'kingshot-formation-optimizer', version: 1, heroes: {} })).ok, false);
+  assert.equal(parseSnapshot('{broken').ok, false);
+  const older = { ...snap, crawledAt: '2026-10-01T00:00:00Z' };
+  assert.equal(newerSnapshot(older, snap), snap);
+  assert.equal(newerSnapshot(null, older), older);
+  const repo = new LocalStorageMasterDataRepository(new MemoryStore());
+  await repo.saveSnapshot(snap);
+  assert.equal((await repo.loadSnapshot())?.crawledAt, snap.crawledAt);
+  await repo.clear();
+  assert.equal(await repo.loadSnapshot(), null);
+});
