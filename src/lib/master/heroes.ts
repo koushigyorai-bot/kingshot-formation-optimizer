@@ -210,8 +210,19 @@ const VERIFIED: Record<string, VerifiedPatch> = {
       skill('Dichotomy', 'conquest', "Petra throws a tarot card at an enemy, dealing Attack*270%/297%/324%/351%/378% damage and inflicting one of the following effects: reducing the target's Attack by 20% for 2s or stunning the target for 1.5s"),
       skill('Change of Fate', 'conquest', "Petra curses an enemy, dealing floating damage based on the base value of Petra's Attack*50%/55%/60%/65%/70%. The final damage is a random amount between 5% and 600% of that base value"),
       skill('Turn Card', 'conquest', "Petra reverses misfortune by healing a friendly hero with the lowest percentage of Health remaining based on the base value of Petra's Attack*100%/110%/120%/130%/140%."),
+      // Expedition: 原文は最大レベルの値のみ表記。Lv1〜5 の段階値（10〜50%）は発動率として kingshotoptimizer.com の表から補った
+      skill('Evil Eye', 'expedition', "Grants all Squads' Attack a 10%/20%/30%/40%/50% chance of cursing the target, increasing their damage taken by 50%."),
+      skill('The Favor', 'expedition', "Petra is known as a lucky fortune-teller to her soldiers, granting a 10%/20%/30%/40%/50% chance of increasing Squads' Attack by 50%."),
+      skill('The Shield', 'expedition', "Petra's divination navigates bad outcomes with a 10%/20%/30%/40%/50% chance of reducing damage taken by 50% for all squads."),
+      skill('Weighted Deck', 'widget_conquest', "Raises the upper and lower limits of Petra's fluctuating skills by 150%."),
+      skill('Cosmic Eye', 'widget_expedition', 'Petra increases Rally Squad Attack by 5%/7.5%/10%/12.5%/15%.'),
     ],
-    sources: [SRC.masteryConquest],
+    widget: { name: "Fate's Writ", expedition: { lethality: 70, health: 70 }, conquest: { attack: 630, defense: 630, health: 6300 } },
+    sources: [
+      SRC.masteryConquest,
+      { site: 'kingshotmastery.com', url: 'https://kingshotmastery.com/heroes/petra', fetchedAt: '2026-10-28T00:00:00Z', reliability: 'community', note: 'Expedition スキル・ウィジェット' },
+      { site: 'kingshotoptimizer.com', url: 'https://kingshotoptimizer.com/heroes/petra/', fetchedAt: '2026-10-28T00:00:00Z', reliability: 'community', note: 'Expedition スキルの Lv1〜5 段階値（kingshotoptimizer.com）' },
+    ],
     complete: false,
   },
   zoe: {

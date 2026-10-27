@@ -69,6 +69,13 @@ export const SITE_PROFILES: Record<SourceSite, SiteProfile> = {
     priority: 3,
     description: 'エミュレーター運営元のゲームガイド。Gen1 英雄の基礎ステータスの出典として参照。',
   },
+  'kingshotoptimizer.com': {
+    site: 'kingshotoptimizer.com',
+    label: 'Kingshot Optimizer',
+    reliability: 'community',
+    priority: 3,
+    description: '非公式ファンサイト。スキルのレベル別数値の出典として参照。',
+  },
   user: { site: 'user', label: '手入力', reliability: 'official', priority: 0, description: 'ユーザーが直接入力・修正した値。' },
   estimate: {
     site: 'estimate',
