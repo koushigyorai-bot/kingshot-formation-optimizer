@@ -23,6 +23,7 @@ export type SourceSite =
   | 'kingshotmastery.com' // ファンサイト（シード値の出典として参照のみ）
   | 'kingshotguide.org' // ファンサイト（シード値の出典として参照のみ）
   | 'bluestacks.com' // エミュレーター公式ブログ（シード値の出典として参照のみ）
+  | 'kingshotoptimizer.com' // ファンサイト（シード値の出典として参照のみ）
   | 'user' // ユーザーが手入力
   | 'estimate'; // 本ツールの推定値
 
