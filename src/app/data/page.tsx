@@ -1,16 +1,40 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/client/store';
 import type { CrawlSnapshot, SiteReport } from '@/lib/master';
 import { SITE_PROFILES } from '@/lib/master/sources';
+import { BUNDLED_SNAPSHOT_PATH, exportSnapshotJson, snapshotFileName } from '@/lib/master/snapshot';
 import type { SourceSite } from '@/lib/types';
 import { GenBadge, Notice, SectionTitle, SourceLink, StatusBadge, TroopChip } from '@/components/ui';
 
 const TARGETS: SourceSite[] = ['kingshotwiki.com', 'kingshot.wiki', 'kingshottools.pro', 'grindnstrat.com'];
 
 export default function DataPage() {
-  const { master, applySnapshot, resetMaster } = useStore();
+  const { master, applySnapshot, resetMaster, snapshot, masterOrigin, bundledAt, importSnapshot } = useStore();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const doExport = () => {
+    if (!snapshot) return;
+    const blob = new Blob([exportSnapshotJson(snapshot)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = snapshotFileName(snapshot);
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const doImport = async (file: File) => {
+    const r = await importSnapshot(await file.text());
+    setImportMsg(r.ok ? { ok: true, text: `読み込みました（実データのある英雄 ${r.heroes} 人）。このブラウザに保存しました。` } : { ok: false, text: `読み込めませんでした: ${r.error}` });
+  };
+  const originLabel: Record<typeof masterOrigin, string> = {
+    seed: '同梱の初期データのみ（データ更新の結果なし）',
+    browser: 'このブラウザに保存したデータ更新の結果',
+    bundled: `公開サイトに同梱されたデータ（${BUNDLED_SNAPSHOT_PATH}）`,
+    legacy: '旧バージョンで保存したデータ（書き出すには一度「最新情報に更新」してください）',
+  };
   const [progress, setProgress] = useState<{ site: SourceSite; state: 'waiting' | 'running' | 'done' | 'error'; message?: string }[]>([]);
   const [reports, setReports] = useState<SiteReport[]>([]);
   const [busy, setBusy] = useState(false);
@@ -108,7 +132,7 @@ export default function DataPage() {
           className="btn-ghost"
           disabled={busy}
           onClick={() => {
-            if (window.confirm('クロール結果を破棄して、同梱の初期データに戻します。')) void resetMaster();
+            if (window.confirm('このブラウザに保存したデータ更新の結果を削除して、初期データに戻します。（公開サイトに同梱データがある場合は、次回の読み込みからそれが使われます）')) void resetMaster();
           }}
         >
           初期データに戻す
@@ -123,6 +147,46 @@ export default function DataPage() {
           <span>推定値 {counts.estimated}</span>
         </span>
       </div>
+
+      <section className="panel space-y-3 p-4">
+        <h3 className="font-semibold">データ更新の結果を保存・共有する</h3>
+        <p className="text-sm">
+          使用中のデータ: <b>{originLabel[masterOrigin]}</b>
+          {snapshot && <span className="text-ink-soft">（取得日時 {new Date(snapshot.crawledAt).toLocaleString('ja-JP')}）</span>}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-primary" onClick={doExport} disabled={!snapshot}>
+            JSON に書き出す
+          </button>
+          <button className="btn-ghost" onClick={() => fileRef.current?.click()}>
+            JSON を読み込む
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void doImport(f);
+              e.target.value = '';
+            }}
+          />
+        </div>
+        {importMsg && <Notice tone={importMsg.ok ? 'info' : 'error'}>{importMsg.text}</Notice>}
+        <details className="text-sm text-ink-soft">
+          <summary className="cursor-pointer">同盟メンバー全員に同じデータを配る方法</summary>
+          <ol className="mt-2 list-decimal space-y-1 pl-5">
+            <li>「最新情報に更新」のあと「JSON に書き出す」でファイルを保存します。</li>
+            <li>
+              ファイル名を <code>master-data.json</code> に変えて、GitHub のリポジトリの <code>public</code> フォルダに置きます（フォルダが無ければ作成）。
+            </li>
+            <li>Vercel が自動で再公開すると、全員のブラウザでそのデータが使われます。各自が「最新情報に更新」を押す必要はありません。</li>
+          </ol>
+          <p className="mt-1">ブラウザに保存した結果と同梱データの両方がある場合は、取得日時の新しい方を使います。</p>
+          {bundledAt && <p className="mt-1">現在の同梱データの取得日時: {new Date(bundledAt).toLocaleString('ja-JP')}</p>}
+        </details>
+      </section>
 
       {reports.length > 0 && (
         <section className="panel p-4">
