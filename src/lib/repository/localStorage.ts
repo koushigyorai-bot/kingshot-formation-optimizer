@@ -7,6 +7,11 @@ import type { KeyValueStore, MasterDataRepository, UserDataRepository } from './
 export const USER_DATA_KEY = 'kingshot_user_data_v1';
 export const MASTER_DATA_KEY = 'kingshot_master_data_v1';
 export const CRAWL_SNAPSHOT_KEY = 'kingshot_crawl_snapshot_v1';
+/**
+ * 保存形式の版。保存データの形を変えたら上げる。
+ * 他のタブが古いアプリのまま保存した内容（版が古い）は、このタブでは取り込まない。
+ */
+export const USER_DATA_SCHEMA = 2;
 
 /** SSR 中やストレージ無効時に使うメモリ実装 */
 export class MemoryStore implements KeyValueStore {
@@ -55,7 +60,7 @@ export class LocalStorageUserDataRepository implements UserDataRepository {
   }
 
   async save(data: UserData): Promise<void> {
-    const payload: UserData = { ...data, updatedAt: new Date().toISOString() };
+    const payload = { ...data, updatedAt: new Date().toISOString(), schema: USER_DATA_SCHEMA };
     this.store.setItem(USER_DATA_KEY, JSON.stringify(payload));
   }
 
@@ -66,8 +71,16 @@ export class LocalStorageUserDataRepository implements UserDataRepository {
   subscribe(listener: (data: UserData | null) => void): () => void {
     if (typeof window === 'undefined') return () => {};
     const onStorage = (e: StorageEvent) => {
-      if (e.key !== USER_DATA_KEY) return;
-      void this.load().then(listener);
+      if (e.key !== USER_DATA_KEY || !e.newValue) return;
+      try {
+        const raw = JSON.parse(e.newValue) as { schema?: number };
+        // 古いアプリのタブが書いた内容は取り込まない（新しい項目が失われるため）
+        if ((raw.schema ?? 0) < USER_DATA_SCHEMA) return;
+        const r = validateUserData(raw, this.knownHeroIds());
+        if (r.ok) listener(r.data);
+      } catch {
+        /* 壊れたデータは無視 */
+      }
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);

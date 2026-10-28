@@ -47,6 +47,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [saveState, setSaveState] = useState<StoreValue['saveState']>('idle');
   const masterRef = useRef(master);
+  /** 他のタブから取り込んだ直後の変更か（その場合は保存しない） */
+  const externalUpdate = useRef(false);
   masterRef.current = master;
 
   const repos = useRef<Repositories | null>(null);
@@ -84,7 +86,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       setReady(true);
     })();
-    const unsub = repos.current?.user.subscribe?.((u) => u && setUserState(u));
+    // 他のタブで保存された内容を取り込む。取り込んだ内容は保存し直さない（タブ間で上書きし合わないように）
+    const unsub = repos.current?.user.subscribe?.((u) => {
+      if (!u) return;
+      externalUpdate.current = true;
+      setUserState(u);
+    });
     return () => {
       cancelled = true;
       unsub?.();
@@ -97,6 +104,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!ready) return;
     if (firstSave.current) {
       firstSave.current = false;
+      return;
+    }
+    if (externalUpdate.current) {
+      externalUpdate.current = false;
       return;
     }
     setSaveState('saving');
