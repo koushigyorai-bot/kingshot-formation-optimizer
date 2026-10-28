@@ -33,6 +33,7 @@ import { TROOP_TYPES } from '../types';
 import { effectValueAt } from '../crawler/parseSkill';
 import { COUNTERS, EVENT_RULES, type EventRule } from '../master/events';
 import { DEFAULT_CONFIG, type CalcConfig } from './config';
+import { heroGearTroopBonus } from './heroGear';
 
 export const TROOP_LABEL: Record<TroopType, string> = { infantry: '歩兵', cavalry: '騎兵', archer: '弓兵' };
 
@@ -55,10 +56,13 @@ export function heroGrowth(o: OwnedHero, cfg: CalcConfig = DEFAULT_CONFIG): numb
   return levelFactor(o.level, cfg) * starFactor(o.stars, cfg) * (o.awakened ? 1 + cfg.awakeningBonus.value : 1);
 }
 
-/** 英雄装備の倍率（1 + Σ練磨 + Σ精錬鍛造） */
+/**
+ * Conquest 用: 英雄装備による英雄ステータスの倍率（推定）。
+ * Expedition では倍率ではなく部隊の殺傷力・HP として加算する（heroGearTroopBonus）。
+ */
 export function heroGearFactor(o: OwnedHero, cfg: CalcConfig = DEFAULT_CONFIG): number {
-  const pct = o.gear.reduce((s, g) => s + g.level * cfg.heroGearPerLevel.value + g.mastery * cfg.heroGearPerMastery.value, 0);
-  return 1 + pct / 100;
+  const b = heroGearTroopBonus(o, cfg.heroGearPerMastery.value);
+  return 1 + ((b.lethality + b.health) / 100) * cfg.heroGearConquestWeight.value;
 }
 
 export function widgetSkillLevel(widgetLevel: number): number {
@@ -245,13 +249,19 @@ export function precomputeExpedition(
     let heroDefPct = 0;
     let widgetAtk = 0;
     let widgetDef = 0;
+    let gearLeth = 0;
+    let gearHp = 0;
     if (heroStatsApply) {
       for (const h of formation.filter((x) => x.troop === t)) {
         const o = user.heroes[h.id];
         if (!o) continue;
-        const g = heroGrowth(o, cfg) * heroGearFactor(o, cfg);
+        const g = heroGrowth(o, cfg);
         heroAtkPct += h.expedition.attack * g;
         heroDefPct += h.expedition.defense * g;
+        // 英雄装備: 頭・足 = 殺傷力、手・胴 = HP（同じ兵種の部隊に加算）
+        const gb = heroGearTroopBonus(o, cfg.heroGearPerMastery.value);
+        gearLeth += gb.lethality;
+        gearHp += gb.health;
         if (o.widget.owned && h.widget) {
           const ratio = Math.min(1, o.widget.level / cfg.widgetMaxLevel.value);
           widgetAtk += (h.widget.expedition.lethality ?? h.widget.expedition.attack ?? 0) * ratio;
@@ -270,7 +280,7 @@ export function precomputeExpedition(
     const skillBuff = 1 + (troopStat(skills, t, 'damageUp') + rallyAttack + troopStat(skills, t, 'enemyDamageTakenUp')) / 100;
     const counter = counterFactor(t, enemy, event, cfg);
     const widget = 1 + (isAttack ? widgetAtk : widgetDef) / 100;
-    const lethality = 1 + (troopStat(skills, t, 'lethality') + bonus.lethality) / 100;
+    const lethality = 1 + (troopStat(skills, t, 'lethality') + bonus.lethality + gearLeth) / 100;
     const squadAttack = 1 + troopStat(skills, t, 'squadAttack') / 100;
     const crit = 1 + (troopStat(skills, t, 'critRate') / 100) * (cfg.critDamageBase.value + troopStat(skills, t, 'critDamage') / 100);
 
@@ -278,7 +288,7 @@ export function precomputeExpedition(
     offense[t] = adjusted[t] * lethality * squadAttack * crit;
 
     // 生存側: 兵 1 あたりの実効 HP
-    const hp = tb.health * (1 + (bonus.health + troopStat(skills, t, 'squadHealth')) / 100);
+    const hp = tb.health * (1 + (bonus.health + gearHp + troopStat(skills, t, 'squadHealth')) / 100);
     const def = 1 + (heroDefPct + bonus.defense + troopStat(skills, t, 'squadDefense')) / 100;
     const cap = cfg.maxDamageReduction.value;
     const dtd = Math.min(cap, troopStat(skills, t, 'damageTakenDown') / 100);
@@ -291,15 +301,17 @@ export function precomputeExpedition(
 
   const heroContrib: HeroContribution[] = formation.map((h) => {
     const o = user.heroes[h.id];
-    const g = o ? heroGrowth(o, cfg) * heroGearFactor(o, cfg) : 0;
+    const g = o ? heroGrowth(o, cfg) : 0;
     const statPct = heroStatsApply ? h.expedition.attack * g : 0;
+    const gb = o ? heroGearTroopBonus(o, cfg.heroGearPerMastery.value) : { lethality: 0, health: 0, estimated: false };
+    const gearText = gb.lethality + gb.health > 0 ? ` ／ 装備 殺傷力 +${gb.lethality.toFixed(1)}%・HP +${gb.health.toFixed(1)}%${gb.estimated ? '（推定含む）' : ''}` : '';
     return {
       heroId: h.id,
       level: o?.level ?? 0,
       stars: o?.stars ?? 0,
       growth: g,
       statText: heroStatsApply
-        ? `${TROOP_LABEL[h.troop]}の攻撃 +${statPct.toFixed(0)}%（基礎 ${h.expedition.attack}% × 補正 ${g.toFixed(2)}）`
+        ? `${TROOP_LABEL[h.troop]}の攻撃 +${statPct.toFixed(0)}%（基礎 ${h.expedition.attack}% × 補正 ${g.toFixed(2)}）${gearText}`
         : '参加時は英雄ステータスは反映されない',
       skills: skills.contributions.filter((c) => c.heroId === h.id).map(({ skill, stat, value }) => ({ skill, stat, value })),
       missingSkills: !h.skills.some((sk) => sk.kind === 'expedition'),

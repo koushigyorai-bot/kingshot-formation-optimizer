@@ -23,8 +23,8 @@ export interface CalcConfig {
   /** 星補正: 1 + 係数 × 星の数 */
   starFactorPerStar: Coefficient;
   awakeningBonus: Coefficient;
-  heroGearPerLevel: Coefficient; // 強化 1 レベルあたり英雄ステータス +%
-  heroGearPerMastery: Coefficient; // マスタリー 1 レベルあたり +%
+  heroGearPerMastery: Coefficient; // 精錬鍛造 1Lv あたり、装備効果を何 % 上乗せするか
+  heroGearConquestWeight: Coefficient; // Conquest で英雄装備の効果を英雄ステータスへどれだけ反映するか
   vipAttackPerLevel: Coefficient;
   counterBonus: Coefficient; // 兵種相性の有利・不利の幅
   bearRangedStrike: Coefficient; // 熊（歩兵扱い）に対する弓兵ボーナス
@@ -44,8 +44,18 @@ export const DEFAULT_CONFIG: CalcConfig = {
   levelFactorMin: { value: 0.25, label: 'レベル補正（Lv1 時点の倍率）', assumption: true, note: 'Lv80 で 1.0。間は線形補間' },
   starFactorPerStar: { value: 0.08, label: '星補正（星 1 つあたり）', assumption: true },
   awakeningBonus: { value: 0.05, label: '覚醒ボーナス', assumption: true },
-  heroGearPerLevel: { value: 0.05, label: '英雄装備 練磨 1Lv あたり +%', assumption: true, note: '公式 Wiki は「練磨（強化）で Conquest/Expedition ステータスが上がる」とのみ記載' },
-  heroGearPerMastery: { value: 0.5, label: '英雄装備 精錬鍛造 1Lv あたり +%', assumption: true, note: '公式 Wiki は精錬鍛造（マスタリー）を乗算の強化と説明。係数は未公開' },
+  heroGearPerMastery: {
+    value: 5,
+    label: '英雄装備 精錬鍛造 1Lv あたり装備効果 +%',
+    assumption: true,
+    note: '公式 Wiki は精錬鍛造で装備ステータスが x% 上がると説明するが x は未公開。レジェンド装備のみ',
+  },
+  heroGearConquestWeight: {
+    value: 0.5,
+    label: 'Conquest での英雄装備の反映率',
+    assumption: true,
+    note: '装備の Conquest ステータス（英雄の攻撃・HP）は未確認。Expedition 効果 % の半分を英雄ステータス % とみなす',
+  },
   vipAttackPerLevel: {
     value: 0,
     label: 'VIP 1Lv あたり攻撃 +%',
