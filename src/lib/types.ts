@@ -218,9 +218,14 @@ export interface LordGear {
   setBonus: { attack: number; defense: number; lethality: number; health: number };
 }
 
+/** 英雄装備のランク（ゲーム内表記: レジェンド / エピック / レア / グッド / ノーマル） */
+export const HERO_GEAR_RANKS = ['none', 'normal', 'good', 'rare', 'epic', 'legendary'] as const;
+export type HeroGearRank = (typeof HERO_GEAR_RANKS)[number];
+
 export interface HeroGearSlot {
-  level: number; // 練磨（強化）レベル 0〜200（0 = 未装備）
-  mastery: number; // 精錬鍛造（マスタリー鍛造）0〜20
+  rank: HeroGearRank; // 'none' = 未装備
+  level: number; // 練磨（強化）レベル 0〜100
+  mastery: number; // 精錬鍛造 0〜20（レジェンドのみ。それ以外は常に 0）
 }
 
 export interface OwnedHero {
@@ -230,9 +235,7 @@ export interface OwnedHero {
   stars: number; // 0〜5（赤星）
   awakened: boolean;
   /**
-   * 英雄装備 4 部位（頭・手・胴・足）。仕様書は 6 部位 × Lv1〜30 だったが、
-   * ゲーム内は 4 部位で、練磨は品質ごとに上限が Lv100（神話）/ Lv200（赤）まであるため
-   * 練磨 0〜200・精錬鍛造 0〜20 を受け付ける。
+   * 英雄装備 4 部位（頭・手・胴・足）。各部位にランク・練磨 Lv（0〜100）・精錬鍛造（レジェンドのみ）を持つ。
    */
   gear: HeroGearSlot[];
   expeditionSkills: number[]; // 3 枠 × 0〜5（0 = 未解放）

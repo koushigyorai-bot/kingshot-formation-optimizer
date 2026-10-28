@@ -2,7 +2,7 @@
 export const LIMITS = {
   heroLevel: { min: 1, max: 80 },
   heroStars: { min: 0, max: 5 },
-  heroGearLevel: { min: 0, max: 200 },
+  heroGearLevel: { min: 0, max: 100 },
   heroGearMastery: { min: 0, max: 20 },
   skillLevel: { min: 0, max: 5 },
   widgetLevel: { min: 0, max: 10 },

@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import type { HeroMaster, OwnedHero } from '@/lib/types';
-import { HERO_GEAR_SLOT_LABELS, HERO_GEAR_SLOTS } from '@/lib/types';
+import { HERO_GEAR_RANKS, HERO_GEAR_SLOT_LABELS, HERO_GEAR_SLOTS, type HeroGearRank, type HeroGearSlot } from '@/lib/types';
+import { HERO_GEAR_RANK_LABEL, HERO_GEAR_SLOT_STAT, heroGearSlotValue } from '@/lib/calculator/heroGear';
+import { DEFAULT_CONFIG } from '@/lib/calculator/config';
 import { validateOwnedHero } from '@/lib/validation/userData';
 import { GenBadge, HeroPortrait, NumberField, StatusBadge, Toggle, TroopChip } from './ui';
 
@@ -121,15 +123,50 @@ export function HeroCard({ hero, owned, onChange }: { hero: HeroMaster; owned: O
           </fieldset>
 
           <fieldset>
-            <legend className="field-label">英雄装備（精錬鍛造 0〜20 / 練磨 Lv 0〜200）</legend>
+            <legend className="field-label">英雄装備（ランク / 精錬鍛造 0〜20・レジェンドのみ / 練磨 Lv 0〜100）</legend>
             <div className="grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2">
               {Array.from({ length: HERO_GEAR_SLOTS }, (_, i) => {
-                const g = owned.gear[i] ?? { level: 0, mastery: 0 };
-                const set = (patch: Partial<typeof g>) => onChange({ gear: owned.gear.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+                const g: HeroGearSlot = owned.gear[i] ?? { rank: 'none', level: 0, mastery: 0 };
+                const set = (patch: Partial<HeroGearSlot>) => onChange({ gear: owned.gear.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+                const slot = HERO_GEAR_SLOT_LABELS[i] ?? `部位${i + 1}`;
+                const value = heroGearSlotValue(g, DEFAULT_CONFIG.heroGearPerMastery.value);
                 return (
-                  <div key={i} className="grid grid-cols-2 gap-1 rounded-md border border-parchment-line bg-white p-1.5">
-                    <NumberField compact label={`${HERO_GEAR_SLOT_LABELS[i] ?? `部位${i + 1}`} 精錬鍛造`} limit="heroGearMastery" value={g.mastery} onChange={(v) => set({ mastery: v })} />
-                    <NumberField compact label="練磨" limit="heroGearLevel" value={g.level} onChange={(v) => set({ level: v })} />
+                  <div key={i} className="space-y-1 rounded-md border border-parchment-line bg-white p-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold">{slot}</span>
+                      <select
+                        className="input w-auto py-1 text-xs"
+                        aria-label={`${slot}のランク`}
+                        value={g.rank}
+                        onChange={(e) => {
+                          const rank = e.target.value as HeroGearRank;
+                          set({ rank, mastery: rank === 'legendary' ? g.mastery : 0, level: rank === 'none' ? 0 : g.level });
+                        }}
+                      >
+                        {[...HERO_GEAR_RANKS].reverse().map((r) => (
+                          <option key={r} value={r}>
+                            {HERO_GEAR_RANK_LABEL[r]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      <NumberField
+                        compact
+                        label="精錬鍛造"
+                        limit="heroGearMastery"
+                        value={g.mastery}
+                        disabled={g.rank !== 'legendary'}
+                        onChange={(v) => set({ mastery: v })}
+                      />
+                      <NumberField compact label="練磨" limit="heroGearLevel" value={g.level} disabled={g.rank === 'none'} onChange={(v) => set({ level: v })} />
+                    </div>
+                    {g.rank !== 'none' && (
+                      <p className="text-[11px] text-ink-mute">
+                        {HERO_GEAR_SLOT_STAT[i] === 'lethality' ? '殺傷力' : 'HP'} +{value.toFixed(1)}%
+                        {g.rank === 'rare' || g.rank === 'good' || g.rank === 'normal' ? '（推定）' : ''}
+                      </p>
+                    )}
                   </div>
                 );
               })}

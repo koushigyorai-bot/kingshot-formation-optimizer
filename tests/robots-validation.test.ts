@@ -31,13 +31,13 @@ test('エクスポート → インポートで内容が保たれる', () => {
   const d = createDefaultUserData(ids);
   d.heroes.amadeus!.owned = true;
   d.heroes.amadeus!.level = 61;
-  d.heroes.amadeus!.gear[2] = { level: 120, mastery: 8 };
+  d.heroes.amadeus!.gear[2] = { rank: 'legendary', level: 90, mastery: 8 };
   d.troops.archer = { tier: 9, count: 123456 };
   const r = importUserDataJson(exportUserDataJson(d), ids);
   assert.ok(r.ok);
   if (!r.ok) return;
   assert.equal(r.data.heroes.amadeus?.level, 61);
-  assert.deepEqual(r.data.heroes.amadeus?.gear[2], { level: 120, mastery: 8 });
+  assert.deepEqual(r.data.heroes.amadeus?.gear[2], { rank: 'legendary', level: 90, mastery: 8 });
   assert.equal(r.data.troops.archer.count, 123456);
   assert.equal(r.warnings.length, 0);
 });
@@ -52,7 +52,9 @@ test('範囲外の値は補正して警告、壊れた JSON はエラー', () =>
   if (!r.ok) return;
   assert.equal(r.data.heroes.amadeus?.level, 80);
   assert.equal(r.data.heroes.amadeus?.stars, 0);
-  assert.deepEqual(r.data.heroes.amadeus?.gear[1], { level: 10, mastery: 0 });
+  assert.deepEqual(r.data.heroes.amadeus?.gear[1], { rank: 'legendary', level: 10, mastery: 0 });
+  assert.deepEqual(r.data.heroes.amadeus?.gear[3], { rank: 'none', level: 0, mastery: 0 });
+  assert.ok(r.warnings.some((w) => w.path === 'heroes.*.gear'), '旧形式は確認を促す');
   assert.ok(r.warnings.some((w) => w.path === 'heroes.amadeus.level'));
 
   assert.equal(importUserDataJson('{not json', ids).ok, false);
@@ -109,4 +111,17 @@ test('データ更新の結果（スナップショット）の書き出し → 
   assert.equal((await repo.loadSnapshot())?.crawledAt, snap.crawledAt);
   await repo.clear();
   assert.equal(await repo.loadSnapshot(), null);
+});
+
+test('英雄装備: 精錬鍛造はレジェンドのみ、練磨は 100 まで', () => {
+  const d = createDefaultUserData(ids) as unknown as Record<string, any>;
+  d.heroes.amadeus.gear = [
+    { rank: 'epic', level: 150, mastery: 5 },
+    { rank: 'legendary', level: 100, mastery: 20 },
+  ];
+  const r = validateUserData(d, ids);
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.deepEqual(r.data.heroes.amadeus?.gear[0], { rank: 'epic', level: 100, mastery: 0 });
+  assert.deepEqual(r.data.heroes.amadeus?.gear[1], { rank: 'legendary', level: 100, mastery: 20 });
 });

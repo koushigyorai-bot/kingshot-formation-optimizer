@@ -1,5 +1,8 @@
 import {
+  HERO_GEAR_RANKS,
   HERO_GEAR_SLOTS,
+  type HeroGearRank,
+  type HeroGearSlot,
   LORD_GEAR_SLOTS,
   TROOP_TYPES,
   type LordGear,
@@ -25,7 +28,7 @@ export function createDefaultOwnedHero(heroId: string): OwnedHero {
     level: 1,
     stars: 0,
     awakened: false,
-    gear: Array.from({ length: HERO_GEAR_SLOTS }, () => ({ level: 0, mastery: 0 })),
+    gear: Array.from({ length: HERO_GEAR_SLOTS }, (): HeroGearSlot => ({ rank: 'none', level: 0, mastery: 0 })),
     expeditionSkills: [1, 1, 1],
     conquestSkills: [1, 1, 1],
     widget: { owned: false, level: 0 },
@@ -119,6 +122,7 @@ export function validateUserData(input: unknown, knownHeroIds: string[]): Valida
     typeof v === 'string' && (TROOP_TYPES as readonly string[]).includes(v) ? (v as TroopType) : fallback;
 
   // 英雄
+  let legacyGear = false;
   const heroes: Record<string, OwnedHero> = { ...base.heroes };
   for (const [id, raw] of Object.entries(input.heroes as Obj)) {
     if (!isObj(raw)) {
@@ -134,15 +138,20 @@ export function validateUserData(input: unknown, knownHeroIds: string[]): Valida
       level: num(`${p}.level`, 'heroLevel', raw.level ?? d.level, d.level),
       stars: num(`${p}.stars`, 'heroStars', raw.stars ?? d.stars, d.stars),
       awakened: raw.awakened === true,
-      gear: Array.from({ length: HERO_GEAR_SLOTS }, (_, i) => {
+      gear: Array.from({ length: HERO_GEAR_SLOTS }, (_, i): HeroGearSlot => {
         const g = gearRaw[i];
-        // 旧形式（数値のみ）も受け付ける
-        if (typeof g === 'number') return { level: num(`${p}.gear[${i}]`, 'heroGearLevel', g, 0), mastery: 0 };
-        const go = isObj(g) ? g : {};
-        return {
-          level: num(`${p}.gear[${i}].level`, 'heroGearLevel', go.level ?? 0, 0),
-          mastery: num(`${p}.gear[${i}].mastery`, 'heroGearMastery', go.mastery ?? 0, 0),
-        };
+        const go: Obj = typeof g === 'number' ? { level: g } : isObj(g) ? g : {};
+        const level = num(`${p}.gear[${i}].level`, 'heroGearLevel', go.level ?? 0, 0);
+        let rank: HeroGearRank;
+        if (typeof go.rank === 'string' && (HERO_GEAR_RANKS as readonly string[]).includes(go.rank)) rank = go.rank as HeroGearRank;
+        else {
+          // 旧形式（ランクなし）: 入力済みの部位はレジェンドとみなし、確認を促す
+          rank = level > 0 || Number(go.mastery ?? 0) > 0 ? 'legendary' : 'none';
+          if (rank !== 'none') legacyGear = true;
+        }
+        const masteryIn = num(`${p}.gear[${i}].mastery`, 'heroGearMastery', go.mastery ?? 0, 0);
+        if (rank !== 'legendary' && masteryIn > 0) warnings.push({ path: `${p}.gear[${i}].mastery`, message: '精錬鍛造はレジェンド装備のみのため 0 にしました' });
+        return { rank, level: rank === 'none' ? 0 : level, mastery: rank === 'legendary' ? masteryIn : 0 };
       }),
       expeditionSkills: [0, 1, 2].map((i) =>
         num(`${p}.expeditionSkills[${i}]`, 'skillLevel', (raw.expeditionSkills as unknown[] | undefined)?.[i] ?? 1, 1),
@@ -156,6 +165,10 @@ export function validateUserData(input: unknown, knownHeroIds: string[]): Valida
       },
     };
     if (!knownHeroIds.includes(id)) warnings.push({ path: p, message: '未知の英雄 ID です（マスターデータ更新後に表示されます）' });
+  }
+
+  if (legacyGear) {
+    warnings.push({ path: 'heroes.*.gear', message: '旧形式の英雄装備（ランクなし）を読み込みました。入力済みの部位はレジェンドとして扱っています。ランクを確認してください' });
   }
 
   // 領主装備
@@ -235,6 +248,7 @@ export function validateOwnedHero(h: OwnedHero): Record<string, string> {
   h.gear.forEach((g, i) => {
     add(`gear.${i}.level`, 'heroGearLevel', g.level);
     add(`gear.${i}.mastery`, 'heroGearMastery', g.mastery);
+    if (g.rank !== 'legendary' && g.mastery > 0) out[`gear.${i}.mastery`] = '精錬鍛造はレジェンド装備のみです';
   });
   h.expeditionSkills.forEach((v, i) => add(`expeditionSkills.${i}`, 'skillLevel', v));
   h.conquestSkills.forEach((v, i) => add(`conquestSkills.${i}`, 'skillLevel', v));

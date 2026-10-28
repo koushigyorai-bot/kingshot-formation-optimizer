@@ -186,3 +186,32 @@ test('領主装備: 対応兵種にだけ % が加算され、初期の兵種は
   assert.deepEqual(troopStatBonus(u, 'archer'), { attack: 0, defense: 0, lethality: 7, health: 0 });
   assert.deepEqual(troopStatBonus(u, 'infantry'), { attack: 0, defense: 0, lethality: 0, health: 0 });
 });
+
+test('英雄装備: ランク別の効果量（kingshotoptimizer.com の表）と部隊への加算', async () => {
+  const { heroGearSlotValue, heroGearTroopBonus } = await import('../src/lib/calculator/heroGear');
+  const close = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
+  close(heroGearSlotValue({ rank: 'legendary', level: 0, mastery: 0 }, 0), 15);
+  close(heroGearSlotValue({ rank: 'legendary', level: 100, mastery: 0 }, 0), 50);
+  close(heroGearSlotValue({ rank: 'epic', level: 80, mastery: 0 }, 0), 25.8);
+  close(heroGearSlotValue({ rank: 'epic', level: 50, mastery: 10 }, 5), 19.5, ); // エピックは精錬鍛造が効かない
+  close(heroGearSlotValue({ rank: 'none', level: 50, mastery: 0 }, 5), 0);
+  const u = account(['chenko', 'amadeus', 'saul']);
+  const o = u.heroes.chenko!;
+  o.gear = [
+    { rank: 'legendary', level: 100, mastery: 0 }, // 頭 = 殺傷力
+    { rank: 'legendary', level: 100, mastery: 0 }, // 手 = HP
+    { rank: 'epic', level: 0, mastery: 0 }, // 胴 = HP
+    { rank: 'none', level: 0, mastery: 0 }, // 足
+  ];
+  const b = heroGearTroopBonus(o, 5);
+  close(b.lethality, 50);
+  close(b.health, 59);
+  // 装備を付けると騎兵の与ダメージが上がる
+  const f = ['amadeus', 'chenko', 'saul'].map((id) => H.get(id)!);
+  const ratio = { infantry: 10, cavalry: 30, archer: 60 };
+  const without = account(['chenko', 'amadeus', 'saul']);
+  const s0 = scoreExpedition(precomputeExpedition(f, without, 'bear', 'leader', { infantry: 100, cavalry: 0, archer: 0 }, H), ratio, without);
+  const s1 = scoreExpedition(precomputeExpedition(f, u, 'bear', 'leader', { infantry: 100, cavalry: 0, archer: 0 }, H), ratio, u);
+  assert.ok(s1.perTroop!.cavalry > s0.perTroop!.cavalry);
+  close(s1.perTroop!.archer, s0.perTroop!.archer);
+});
