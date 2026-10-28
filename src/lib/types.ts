@@ -243,8 +243,15 @@ export interface OwnedHero {
   widget: { owned: boolean; level: number }; // level 0〜10
 }
 
+/**
+ * 兵種ごとの兵士の状態。歩兵（兵舎）・騎兵（厩舎）・弓兵（射撃場）は建物が別なので兵種ごとに持つ。
+ * - level: 兵士レベル 1〜10（建物のレベルに応じて訓練できる段階）
+ * - truegold: 黄金レベル 0〜8（役場 Lv30 以降、建物を黄金化すると上がる。0 = 未黄金化）
+ *   黄金レベルはレベル 10 の兵士を強化するもの（kingshotmastery.com）なので、level = 10 のときだけ有効
+ */
 export interface TroopStock {
-  tier: number; // 1〜10
+  level: number; // 1〜10
+  truegold: number; // 0〜8
   count: number;
 }
 
@@ -278,7 +285,7 @@ export interface UserData {
   updatedAt: string;
   lordGear: LordGear;
   heroes: Record<string, OwnedHero>;
-  troops: Record<TroopType, TroopStock> & { barracksLevel: number };
+  troops: Record<TroopType, TroopStock>;
   buffs: UserBuffs;
   settings: UserSettings;
 }

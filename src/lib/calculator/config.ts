@@ -30,7 +30,8 @@ export interface CalcConfig {
   bearRangedStrike: Coefficient; // 熊（歩兵扱い）に対する弓兵ボーナス
   bearUnits: Coefficient; // 熊の兵数
   troopT6: Coefficient<Record<TroopType, StatBlock>>;
-  tierGrowth: Coefficient; // ティア 1 段あたりの兵ステータス倍率
+  tierGrowth: Coefficient; // 兵士レベル 1 段あたりの兵ステータス倍率
+  truegoldPerLevel: Coefficient; // 黄金レベル 1 段あたりの兵ステータス +%
   widgetMaxLevel: Coefficient;
   critDamageBase: Coefficient;
   conquestSkillWeight: Coefficient; // Attack×X% スキルを通常攻撃何回分とみなすか
@@ -80,7 +81,13 @@ export const DEFAULT_CONFIG: CalcConfig = {
     label: 'T6 兵の基礎ステータス',
     source: SRC.bearMechanics,
   },
-  tierGrowth: { value: 1.1, label: 'ティア 1 段あたりの兵ステータス倍率', assumption: true, note: 'T6 以外の実値は未確認' },
+  tierGrowth: { value: 1.1, label: '兵士レベル 1 段あたりの兵ステータス倍率', assumption: true, note: 'レベル 6（T6）以外の実値は未確認' },
+  truegoldPerLevel: {
+    value: 5,
+    label: '黄金レベル 1 段あたりの兵ステータス +%',
+    assumption: true,
+    note: '黄金化でレベル 10 の兵が強くなる（kingshotmastery.com）が、上がり幅は未公開',
+  },
   widgetMaxLevel: { value: 10, label: 'ウィジェット最大レベル', assumption: true, note: 'スキル Lv = ceil(ウィジェット Lv / 2) とみなす' },
   critDamageBase: { value: 0.5, label: 'クリティカル基礎ダメージ倍率', assumption: true },
   conquestSkillWeight: { value: 0.5, label: 'Conquest ダメージスキルの重み', assumption: true },

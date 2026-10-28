@@ -202,12 +202,21 @@ function TroopsTab() {
           <div key={t} className="panel space-y-2 p-3">
             <h3 className="font-semibold">{TROOP_LABEL[t]}</h3>
             <NumberField
-              label="ティア"
-              suffix="T1〜T10"
-              limit="troopTier"
-              value={user.troops[t].tier}
-              onChange={(v) => setUser((u) => ({ ...u, troops: { ...u.troops, [t]: { ...u.troops[t], tier: v } } }))}
+              label="兵士レベル"
+              suffix="1〜10"
+              limit="troopLevel"
+              value={user.troops[t].level}
+              onChange={(v) => setUser((u) => ({ ...u, troops: { ...u.troops, [t]: { ...u.troops[t], level: v, truegold: v < 10 ? 0 : u.troops[t].truegold } } }))}
             />
+            <NumberField
+              label="黄金レベル"
+              suffix="0〜8"
+              limit="troopTruegold"
+              disabled={user.troops[t].level < 10}
+              value={user.troops[t].truegold}
+              onChange={(v) => setUser((u) => ({ ...u, troops: { ...u.troops, [t]: { ...u.troops[t], truegold: v } } }))}
+            />
+            {user.troops[t].level < 10 && <p className="text-[11px] text-ink-mute">黄金レベルは兵士レベル 10 になると入力できます</p>}
             <NumberField
               label="保有数"
               limit="troopCount"
@@ -217,8 +226,7 @@ function TroopsTab() {
           </div>
         ))}
       </div>
-      <div className="panel grid gap-3 p-3 sm:grid-cols-3">
-        <NumberField label="兵舎レベル" limit="barracksLevel" value={user.troops.barracksLevel} onChange={(v) => setUser((u) => ({ ...u, troops: { ...u.troops, barracksLevel: v } }))} />
+      <div className="panel grid gap-3 p-3 sm:grid-cols-2">
         <NumberField
           label="行軍・集結の容量（兵数）"
           limit="marchCapacity"
@@ -231,7 +239,7 @@ function TroopsTab() {
         </div>
       </div>
       <Notice>
-        T6 以外のティアの基礎ステータスは確認できなかったため、T6 の実値（プレイヤー解析）から 1 段あたり 1.1 倍で推定しています。保有数を 0 のままにすると、在庫制限なしで比率だけを計算します。
+        歩兵（兵舎）・騎兵（厩舎）・弓兵（射撃場）は建物が別なので、兵種ごとに入力します。役場がレベル 30 になると建物の黄金化（黄金レベル 1〜8）が始まり、レベル 10 の兵士が強化されます。兵士レベル 6 の能力値はプレイヤー解析の実値ですが、それ以外のレベルと黄金レベルの効果は推定です（計算の前提を参照）。保有数を 0 のままにすると、在庫制限なしで比率だけを計算します。
       </Notice>
     </div>
   );

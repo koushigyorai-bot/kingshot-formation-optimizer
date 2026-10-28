@@ -27,9 +27,9 @@ function account(owned: string[], tweak?: (u: UserData) => void): UserData {
     o.expeditionSkills = [3, 3, 3];
     o.conquestSkills = [3, 3, 3];
   }
-  u.troops.infantry = { tier: 6, count: 0 };
-  u.troops.cavalry = { tier: 6, count: 0 };
-  u.troops.archer = { tier: 6, count: 0 };
+  u.troops.infantry = { level: 6, truegold: 0, count: 0 };
+  u.troops.cavalry = { level: 6, truegold: 0, count: 0 };
+  u.troops.archer = { level: 6, truegold: 0, count: 0 };
   u.settings.marchCapacity = 100_000;
   tweak?.(u);
   return u;
@@ -214,4 +214,11 @@ test('英雄装備: ランク別の効果量（kingshotoptimizer.com の表）�
   const s1 = scoreExpedition(precomputeExpedition(f, u, 'bear', 'leader', { infantry: 100, cavalry: 0, archer: 0 }, H), ratio, u);
   assert.ok(s1.perTroop!.cavalry > s0.perTroop!.cavalry);
   close(s1.perTroop!.archer, s0.perTroop!.archer);
+});
+
+test('兵士: 黄金レベルはレベル 10 の兵だけを強化する', async () => {
+  const { troopBase } = await import('../src/lib/calculator');
+  assert.equal(troopBase('archer', 6).attack, 974);
+  assert.ok(troopBase('archer', 10, 3).attack > troopBase('archer', 10, 0).attack);
+  assert.equal(troopBase('archer', 9, 3).attack, troopBase('archer', 9, 0).attack);
 });

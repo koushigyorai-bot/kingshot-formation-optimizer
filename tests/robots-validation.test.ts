@@ -32,7 +32,7 @@ test('エクスポート → インポートで内容が保たれる', () => {
   d.heroes.amadeus!.owned = true;
   d.heroes.amadeus!.level = 61;
   d.heroes.amadeus!.gear[2] = { rank: 'legendary', level: 90, mastery: 8 };
-  d.troops.archer = { tier: 9, count: 123456 };
+  d.troops.archer = { level: 10, truegold: 3, count: 123456 };
   const r = importUserDataJson(exportUserDataJson(d), ids);
   assert.ok(r.ok);
   if (!r.ok) return;
@@ -124,4 +124,17 @@ test('英雄装備: 精錬鍛造はレジェンドのみ、練磨は 100 まで'
   if (!r.ok) return;
   assert.deepEqual(r.data.heroes.amadeus?.gear[0], { rank: 'epic', level: 100, mastery: 0 });
   assert.deepEqual(r.data.heroes.amadeus?.gear[1], { rank: 'legendary', level: 100, mastery: 20 });
+});
+
+test('兵士: 旧形式 tier は兵士レベルに引き継ぎ、黄金レベルはレベル 10 のときだけ', () => {
+  const d = createDefaultUserData(ids) as unknown as Record<string, any>;
+  d.troops = { infantry: { tier: 8, count: 5 }, cavalry: { level: 9, truegold: 2, count: 1 }, archer: { level: 10, truegold: 4, count: 1 }, barracksLevel: 25 };
+  const r = validateUserData(d, ids);
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.deepEqual(r.data.troops.infantry, { level: 8, truegold: 0, count: 5 });
+  assert.equal(r.data.troops.cavalry.truegold, 0);
+  assert.equal(r.data.troops.archer.truegold, 4);
+  assert.ok(r.warnings.some((w) => w.path === 'troops.cavalry.truegold'));
+  assert.equal('barracksLevel' in r.data.troops, false);
 });

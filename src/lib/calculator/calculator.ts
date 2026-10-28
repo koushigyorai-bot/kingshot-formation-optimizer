@@ -70,9 +70,11 @@ export function widgetSkillLevel(widgetLevel: number): number {
 }
 
 /** ティア補正済みの兵の基礎ステータス */
-export function troopBase(t: TroopType, tier: number, cfg: CalcConfig = DEFAULT_CONFIG): StatBlock {
+/** 兵士レベル（1〜10）と黄金レベル（0〜8）を反映した兵の基礎ステータス */
+export function troopBase(t: TroopType, level: number, truegold = 0, cfg: CalcConfig = DEFAULT_CONFIG): StatBlock {
   const base = cfg.troopT6.value[t];
-  const m = cfg.tierGrowth.value ** (tier - 6);
+  const tg = level >= 10 ? Math.max(0, truegold) : 0;
+  const m = cfg.tierGrowth.value ** (level - 6) * (1 + (tg * cfg.truegoldPerLevel.value) / 100);
   return { attack: base.attack * m, defense: base.defense * m, lethality: base.lethality * m, health: base.health * m };
 }
 
@@ -241,7 +243,7 @@ export function precomputeExpedition(
   const heroStatsApply = role === 'leader';
 
   for (const t of TROOP_TYPES) {
-    const tb = troopBase(t, user.troops[t].tier, cfg);
+    const tb = troopBase(t, user.troops[t].level, user.troops[t].truegold, cfg);
     const bonus = troopStatBonus(user, t, cfg);
 
     // Σ(英雄基礎ステータス × レベル補正 × 星補正) + 装備ボーナス

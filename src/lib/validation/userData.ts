@@ -61,10 +61,9 @@ export function createDefaultUserData(heroIds: string[]): UserData {
     lordGear: createDefaultLordGear(),
     heroes: Object.fromEntries(heroIds.map((id) => [id, createDefaultOwnedHero(id)])),
     troops: {
-      infantry: { tier: 1, count: 0 },
-      cavalry: { tier: 1, count: 0 },
-      archer: { tier: 1, count: 0 },
-      barracksLevel: 1,
+      infantry: { level: 1, truegold: 0, count: 0 },
+      cavalry: { level: 1, truegold: 0, count: 0 },
+      archer: { level: 1, truegold: 0, count: 0 },
     },
     buffs: createDefaultBuffs(),
     settings: { serverGeneration: 1, marchCapacity: 100_000 },
@@ -190,15 +189,19 @@ export function validateUserData(input: unknown, knownHeroIds: string[]): Valida
 
   // 兵士
   const tr = input.troops as Obj;
-  const troops = {
-    ...Object.fromEntries(
-      TROOP_TYPES.map((t) => {
-        const o = isObj(tr[t]) ? (tr[t] as Obj) : {};
-        return [t, { tier: num(`troops.${t}.tier`, 'troopTier', o.tier ?? 1, 1), count: num(`troops.${t}.count`, 'troopCount', o.count ?? 0, 0) }];
-      }),
-    ),
-    barracksLevel: num('troops.barracksLevel', 'barracksLevel', tr.barracksLevel ?? 1, 1),
-  } as UserData['troops'];
+  const troops = Object.fromEntries(
+    TROOP_TYPES.map((t) => {
+      const o = isObj(tr[t]) ? (tr[t] as Obj) : {};
+      // 旧形式は "tier"（T1〜T10）= 兵士レベルとして引き継ぐ
+      const level = num(`troops.${t}.level`, 'troopLevel', o.level ?? o.tier ?? 1, 1);
+      let truegold = num(`troops.${t}.truegold`, 'troopTruegold', o.truegold ?? 0, 0);
+      if (truegold > 0 && level < 10) {
+        warnings.push({ path: `troops.${t}.truegold`, message: '黄金レベルは兵士レベル 10 のときだけ有効なため 0 にしました' });
+        truegold = 0;
+      }
+      return [t, { level, truegold, count: num(`troops.${t}.count`, 'troopCount', o.count ?? 0, 0) }];
+    }),
+  ) as UserData['troops'];
 
   // バフ
   const bf = isObj(input.buffs) ? input.buffs : {};
