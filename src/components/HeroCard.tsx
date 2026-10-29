@@ -88,7 +88,7 @@ export function HeroCard({ hero, owned, onChange }: { hero: HeroMaster; owned: O
           </div>
 
           <fieldset>
-            <legend className="field-label">Expedition スキル（0 = 未解放）</legend>
+            <legend className="field-label">遠征スキル（0 = 未解放）</legend>
             <div className="grid grid-cols-3 gap-2">
               {Array.from({ length: 3 }, (_, i) => (
                 <NumberField
@@ -106,7 +106,7 @@ export function HeroCard({ hero, owned, onChange }: { hero: HeroMaster; owned: O
           </fieldset>
 
           <fieldset>
-            <legend className="field-label">Conquest スキル</legend>
+            <legend className="field-label">討伐スキル</legend>
             <div className="grid grid-cols-3 gap-2">
               {Array.from({ length: 3 }, (_, i) => (
                 <NumberField

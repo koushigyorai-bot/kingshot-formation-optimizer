@@ -52,7 +52,7 @@ export default function Home() {
                 <div className="font-semibold">{r.label}</div>
                 <div className="text-xs text-ink-mute">{r.subtitle}</div>
                 <div className="mt-2 text-xs text-crown-deep">
-                  {r.skillSet === 'expedition' ? 'Expedition スキル' : 'Conquest スキル'} ・ 英雄 {r.slots} 人
+                  {r.skillSet === 'expedition' ? '遠征スキル' : '討伐スキル'} ・ 英雄 {r.slots} 人
                 </div>
               </div>
             );

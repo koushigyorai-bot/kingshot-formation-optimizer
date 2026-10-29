@@ -255,8 +255,8 @@ export default function DataPage() {
             <tr>
               <th className="py-1">英雄</th>
               <th>世代/兵種</th>
-              <th>Conquest 攻/防/HP</th>
-              <th>Expedition 攻/防 %</th>
+              <th>討伐 攻/防/HP</th>
+              <th>遠征 攻/防 %</th>
               <th>スキル</th>
               <th>状態</th>
               <th>出典</th>

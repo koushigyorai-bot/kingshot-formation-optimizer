@@ -12,13 +12,22 @@ export interface EventRule {
   skillSet: 'expedition' | 'conquest';
   slots: number;
   /** 位置ごとの推奨兵種（Conquest 系のみ）。null は制約なし */
-  positions?: Array<{ label: string; preferred: TroopType | null }>;
+  positions?: Array<{ label: string; preferred: TroopType[] | null }>;
   /** 攻撃か防衛か（スコアの式が変わる） */
   stance: 'attack' | 'defense' | 'hero_battle';
   /** 敵の兵種（相性補正の既定値） */
   defaultEnemy: TroopRatio;
   notes: Array<{ text: string; source: SourceRef }>;
 }
+
+/** 討伐戦闘（討伐・競技場）の配置: 前列 2（耐久型の歩兵）・後列 3（火力型の弓兵・騎兵）— アルテマ */
+const HERO_BATTLE_POSITIONS: NonNullable<EventRule['positions']> = [
+  { label: '前列', preferred: ['infantry'] },
+  { label: '前列', preferred: ['infantry'] },
+  { label: '後列', preferred: ['cavalry', 'archer'] },
+  { label: '後列', preferred: ['cavalry', 'archer'] },
+  { label: '後列', preferred: ['cavalry', 'archer'] },
+];
 
 export const EVENT_RULES: Record<EventType, EventRule> = {
   rally: {
@@ -70,44 +79,34 @@ export const EVENT_RULES: Record<EventType, EventRule> = {
   },
   arena: {
     id: 'arena',
-    label: 'アリーナ',
-    subtitle: 'Conquest スキルで戦う英雄戦',
+    label: '競技場（アリーナ）',
+    subtitle: '討伐戦闘の対人戦',
     skillSet: 'conquest',
     slots: 5,
-    positions: [
-      { label: '前衛', preferred: 'infantry' },
-      { label: '前衛', preferred: 'infantry' },
-      { label: '側面', preferred: 'cavalry' },
-      { label: '側面', preferred: 'cavalry' },
-      { label: '後衛', preferred: 'archer' },
-    ],
+    positions: HERO_BATTLE_POSITIONS,
     stance: 'hero_battle',
     defaultEnemy: { infantry: 40, cavalry: 40, archer: 20 },
     notes: [
-      {
-        text: '公式 Wiki の推奨初期編成は 5 人（Howard・Forrest・Jabel・Chenko・Quinn）。前衛＝歩兵、側面＝騎兵、後衛＝弓兵の 3 種類の枠がある。',
-        source: SRC.officialArena,
-      },
+      { text: '競技場は討伐と同じ「討伐戦闘」。英雄 5 人（前列 2・後列 3）で、討伐スキルだけが発動する。', source: SRC.altemaBattle },
+      { text: '公式 Wiki の推奨初期編成も 5 人（前列＝歩兵の Howard・Forrest、騎兵の Jabel・Chenko、後衛＝弓兵の Quinn）。', source: SRC.officialArena },
     ],
   },
   conquest: {
     id: 'conquest',
-    label: '征服ステージ',
-    subtitle: 'AFK の自動戦闘',
+    label: '討伐',
+    subtitle: 'ステージ攻略・自動戦闘・放置報酬',
     skillSet: 'conquest',
-    slots: 3,
-    positions: [
-      { label: '前衛', preferred: 'infantry' },
-      { label: '中衛', preferred: 'cavalry' },
-      { label: '後衛', preferred: 'archer' },
-    ],
+    slots: 5,
+    positions: HERO_BATTLE_POSITIONS,
     stance: 'hero_battle',
     defaultEnemy: { infantry: 50, cavalry: 20, archer: 30 },
     notes: [
       {
-        text: '征服ステージは英雄 3 人編成で、Conquest スキルのみ有効（Expedition スキルは効果なし）。前衛の歩兵タンクが落ちると後衛も崩れる。',
-        source: SRC.masteryConquest,
+        text: '英雄 5 人（前列 2・後列 3）。前列は攻撃を受けやすいので歩兵など耐久型、後列は弓兵・騎兵など火力型を置く。発動するのは討伐スキルだけ（遠征スキルは無効）。',
+        source: SRC.altemaBattle,
       },
+      { text: '兵士は使わない。勝敗に効くのは英雄のレベル・星ランク・討伐スキル・英雄装備。', source: SRC.altemaBattle },
+      { text: '第 4 世代のおすすめ例: 前列 エリック・アルカ ／ 後列 マーゴ・ローザ・ペーラ。', source: SRC.altemaGen4 },
     ],
   },
 };
@@ -157,7 +156,7 @@ export const DEFAULT_RATIOS: Record<Exclude<EventType, 'bear'>, RatioPreset> = {
   },
   conquest: {
     ratio: r(50, 20, 30),
-    label: '征服 50/20/30',
+    label: '討伐（兵士は使わない）',
     source: SRC.masteryConquest,
   },
 };

@@ -58,7 +58,7 @@ export default function OptimizePage() {
               <div className="font-semibold">{r.label}</div>
               <div className={`text-[11px] ${active ? 'text-parchment/70' : 'text-ink-mute'}`}>{r.subtitle}</div>
               <div className={`mt-1 text-[11px] ${active ? 'text-crown-soft' : 'text-crown-deep'}`}>
-                {r.skillSet === 'expedition' ? 'Expedition' : 'Conquest'} ・ {r.slots}人
+                {r.skillSet === 'expedition' ? '遠征スキル' : '討伐スキル'} ・ {r.slots}人
               </div>
             </button>
           );
@@ -82,22 +82,11 @@ export default function OptimizePage() {
           )}
           {rule.skillSet === 'expedition' && <Toggle label="兵種比率も最適化" checked={req.optimizeRatio} onChange={(v) => setReq((r) => ({ ...r, optimizeRatio: v }))} />}
           {rule.skillSet === 'conquest' && (
-            <label className="flex items-center gap-2 text-sm">
-              <span className="text-ink-soft">編成人数</span>
-              <select
-                className="input w-auto"
-                value={req.slotOverride ?? rule.slots}
-                onChange={(e) => setReq((r) => ({ ...r, slotOverride: Number(e.target.value) as 3 | 5 }))}
-              >
-                <option value={3}>3 人</option>
-                <option value={5}>5 人</option>
-              </select>
-              {(req.slotOverride ?? rule.slots) !== rule.slots && <span className="text-[11px] text-crown-deep">出典上の既定は {rule.slots} 人です</span>}
-            </label>
+            <span className="text-sm text-ink-soft">英雄 5 人（前列 2・後列 3）。兵士は使わないため、兵種比率と相手の兵種構成は計算に使いません。</span>
           )}
         </div>
 
-        {req.event !== 'bear' && (
+        {req.event !== 'bear' && rule.skillSet === 'expedition' && (
           <EnemyRatioInput value={req.enemyRatio} onChange={(enemyRatio) => setReq((r) => ({ ...r, enemyRatio }))} />
         )}
 
@@ -106,7 +95,12 @@ export default function OptimizePage() {
             {running ? '計算中…' : '最適編成を計算'}
           </button>
           <span className="text-sm text-ink-soft">
-            所持英雄 {ownedCount} 人 ・ 比率の基準: {preset.label}（<SourceLink source={preset.source} />）
+            所持英雄 {ownedCount} 人
+            {rule.skillSet === 'expedition' && (
+              <>
+                {' '}・ 比率の基準: {preset.label}（<SourceLink source={preset.source} />）
+              </>
+            )}
           </span>
         </div>
         {ownedCount === 0 && (
@@ -182,7 +176,7 @@ function Results({ result, heroes }: { result: OptimizeResult; heroes: Map<strin
       {result.results.length === 0 && <p className="text-sm text-ink-mute">候補がありません。</p>}
       <ol className="space-y-3">
         {result.results.map((r, i) => (
-          <ResultCard key={r.heroIds.join('-') + i} rank={i + 1} r={r} heroes={heroes} relative={r.score.total / top} positions={rule.positions} joiner={result.request.role === 'joiner' && rule.skillSet === 'expedition'} />
+          <ResultCard key={r.heroIds.join('-') + i} rank={i + 1} r={r} heroes={heroes} relative={r.score.total / top} positions={rule.positions} heroBattle={rule.skillSet === 'conquest'} joiner={result.request.role === 'joiner' && rule.skillSet === 'expedition'} />
         ))}
       </ol>
     </section>
@@ -195,6 +189,7 @@ function ResultCard({
   heroes,
   relative,
   positions,
+  heroBattle,
   joiner,
 }: {
   rank: number;
@@ -202,6 +197,7 @@ function ResultCard({
   heroes: Map<string, HeroMaster>;
   relative: number;
   positions?: Array<{ label: string }>;
+  heroBattle: boolean;
   joiner: boolean;
 }) {
   const [open, setOpen] = useState(rank === 1);
@@ -240,7 +236,7 @@ function ResultCard({
         </div>
       </div>
 
-      <RatioBar ratio={r.ratio} />
+      {!heroBattle && <RatioBar ratio={r.ratio} />}
 
       <div className="border-t border-parchment-line px-4 py-2">
         <button className="text-sm text-crown-deep hover:underline" onClick={() => setOpen((v) => !v)} aria-expanded={open}>

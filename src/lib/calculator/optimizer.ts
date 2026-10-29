@@ -331,15 +331,15 @@ function groupKey(f: HeroMaster[], positions: Array<{ label: string }>): string 
   return [...groups.entries()].map(([g, ids]) => `${g}:${ids.sort().join('+')}`).join('|');
 }
 
-/** 位置グループ（前衛/側面/後衛）ごとに上位候補を選び、重複なしで組み合わせる */
+/** 位置グループ（前列/後列）ごとに上位候補を選び、重複なしで組み合わせる */
 export function filteredCandidates(
   pool: HeroMaster[],
-  positions: Array<{ label: string; preferred: TroopType | null }>,
+  positions: Array<{ label: string; preferred: TroopType[] | null }>,
   user: UserData,
   cfg: CalcConfig,
   perGroup = 8,
 ): HeroMaster[][] {
-  const groups: Array<{ label: string; size: number; preferred: TroopType | null }> = [];
+  const groups: Array<{ label: string; size: number; preferred: TroopType[] | null }> = [];
   for (const p of positions) {
     const g = groups.find((x) => x.label === p.label);
     if (g) g.size++;
@@ -349,8 +349,8 @@ export function filteredCandidates(
     [...pool]
       .map((h) => {
         const pw = heroPower(h, user, cfg);
-        const fit = g.preferred === null || g.preferred === h.troop ? 1 : cfg.positionMismatchPenalty.value;
-        const value = (g.label === '前衛' ? pw.tank : pw.dps) * fit;
+        const fit = g.preferred === null || g.preferred.includes(h.troop) ? 1 : cfg.positionMismatchPenalty.value;
+        const value = (g.label === '前列' ? pw.tank : pw.dps) * fit;
         return { h, value };
       })
       .sort((a, b) => b.value - a.value)

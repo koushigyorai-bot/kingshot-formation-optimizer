@@ -24,6 +24,7 @@ export type SourceSite =
   | 'kingshotguide.org' // ファンサイト（シード値の出典として参照のみ）
   | 'bluestacks.com' // エミュレーター公式ブログ（シード値の出典として参照のみ）
   | 'kingshotoptimizer.com' // ファンサイト（シード値の出典として参照のみ）
+  | 'altema.jp' // 日本語の攻略サイト（シード値の出典として参照のみ）
   | 'user' // ユーザーが手入力
   | 'estimate'; // 本ツールの推定値
 
@@ -298,8 +299,8 @@ export interface UserData {
  * rally    = 集結攻撃（城塞戦 / チェーザレ討伐 / テラーなど）… Expedition 3 人
  * bear     = 熊狩り（ベアハント）                          … Expedition 3 人
  * garrison = 駐屯・守城                                    … Expedition 3 人
- * arena    = アリーナ                                      … Conquest 5 人（公式 Wiki）
- * conquest = 征服ステージ（AFK）                           … Conquest 3 人（コミュニティ情報）
+ * arena    = 競技場（アリーナ）                            … 討伐スキル 5 人（前列 2・後列 3）
+ * conquest = 討伐（ステージ攻略・自動戦闘）                … 討伐スキル 5 人（前列 2・後列 3）
  */
 export type EventType = 'rally' | 'bear' | 'garrison' | 'arena' | 'conquest';
 

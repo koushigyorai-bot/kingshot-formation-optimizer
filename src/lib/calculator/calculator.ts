@@ -484,14 +484,15 @@ export function scoreHeroBattle(
     const dtd = Math.min(cfg.maxDamageReduction.value, get(own.all, 'damageTakenDown') / 100);
 
     const pos = positions[idx];
-    const mismatch = pos?.preferred && pos.preferred !== h.troop ? cfg.positionMismatchPenalty.value : 1;
-    if (mismatch < 1) notes.push(`${h.name} は ${pos?.label}（推奨: ${pos?.preferred}）に不向き`);
+    const mismatch = pos?.preferred && !pos.preferred.includes(h.troop) ? cfg.positionMismatchPenalty.value : 1;
+    if (mismatch < 1) notes.push(`${h.name}（${TROOP_LABEL[h.troop]}）は${pos?.label}に不向き（推奨: ${pos?.preferred?.map((t) => TROOP_LABEL[t]).join('・')}）`);
 
-    const ehp = ((health * (1 + defense / 10000)) / (1 - dtd)) * (pos?.label === '前衛' ? mismatch : 1);
-    const counter = counterFactor(h.troop, enemy, event, cfg);
+    const ehp = ((health * (1 + defense / 10000)) / (1 - dtd)) * (pos?.label === '前列' ? mismatch : 1);
+    // 討伐戦闘は兵士を使わないため、兵種相性の補正は掛けない（アルテマ）
+    const counter = 1;
     const skillMul = 1 + (get(own.all, 'skillDamage') / 100) * cfg.conquestSkillWeight.value;
-    // 前衛の不適合は耐久に、側面・後衛の不適合は火力に効かせる
-    const isFront = pos?.label === '前衛' || (!positions.length && idx === 0);
+    // 前列の不適合は耐久に、後列の不適合は火力に効かせる
+    const isFront = pos?.label === '前列' || (!positions.length && idx === 0);
     const dps = attack * skillMul * counter * (1 + enemyTakenUp / 100) * (isFront ? 1 : mismatch);
 
     adjusted += attack * skillMul * counter;
@@ -508,13 +509,13 @@ export function scoreHeroBattle(
       missingSkills: !h.skills.some((sk) => sk.kind === 'conquest'),
       estimatedStats: !!h.estimatedFields?.includes('conquest'),
     });
-    if (h.estimatedFields?.includes('conquest')) notes.push(`${h.name}: Conquest ステータスが推定値`);
+    if (h.estimatedFields?.includes('conquest')) notes.push(`${h.name}: 討伐ステータスが推定値`);
   });
 
   const sustain = 1 + healPct / 1000;
   const survival = Math.sqrt(Math.max(0, frontEhp * sustain) / 10000);
   const total = totalDps * survival;
-  if (frontEhp === 0) notes.push('前衛がいないため生存係数が 0 になっています');
+  if (frontEhp === 0) notes.push('前列がいないため生存係数が 0 になっています');
 
   return {
     base,

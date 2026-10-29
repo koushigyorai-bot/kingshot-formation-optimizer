@@ -14,18 +14,40 @@ import type {
 } from '../types';
 import { buildSeedHeroes } from './heroes';
 import { parseSkillDescription } from '../crawler/parseSkill';
-import { SITE_PROFILES, sitePriority } from './sources';
+import { SITE_PROFILES, SRC, sitePriority } from './sources';
 
 export { EVENT_RULES, presetFor, COUNTERS } from './events';
 export { SITE_PROFILES } from './sources';
+
+/** 討伐ランキング（アルテマ「最強キャラランキング」、2026-10-29 閲覧） */
+const SEED_TOUBATSU_TIER: TierList = {
+  category: 'conquest',
+  source: SRC.altemaRanking,
+  entries: [
+    ...['diego', 'liz', 'luna', 'charles', 'ava', 'wee-woo'].map((heroId) => ({ heroId, tier: 'SS' })),
+    ...['triton', 'sophia', 'yang', 'long-fei', 'thrud', 'vivian'].map((heroId) => ({ heroId, tier: 'S' })),
+    ...['alcar', 'margot', 'rosa', 'eric', 'petra', 'jaeger', 'zoe', 'hilde', 'marlin', 'helga', 'jabel', 'amadeus', 'saul'].map((heroId) => ({ heroId, tier: 'A' })),
+    ...['chenko', 'howard', 'gordon', 'quinn', 'amane', 'yeonwoo', 'fahd'].map((heroId) => ({ heroId, tier: 'B' })),
+    ...['diana', 'olive', 'forrest', 'edwin', 'seth'].map((heroId) => ({ heroId, tier: 'C' })),
+  ],
+};
+
+/** 討伐のおすすめ編成例（アルテマ 第 4 世代ページ）: 前列 エリック・アルカ ／ 後列 マーゴ・ローザ・ペーラ */
+const SEED_TOUBATSU_TEMPLATE: FormationTemplate = {
+  event: 'conquest',
+  heroIds: ['eric', 'alcar', 'margot', 'rosa', 'petra'],
+  generation: 4,
+  label: '前列 エリック・アルカ ／ 後列 マーゴ・ローザ・ペーラ',
+  source: SRC.altemaGen4,
+};
 
 export function seedMasterData(): MasterData {
   return {
     version: 1,
     updatedAt: '2026-10-25T00:00:00Z',
     heroes: buildSeedHeroes(),
-    tierLists: [],
-    templates: [],
+    tierLists: [SEED_TOUBATSU_TIER],
+    templates: [SEED_TOUBATSU_TEMPLATE],
     conflicts: [],
   };
 }
