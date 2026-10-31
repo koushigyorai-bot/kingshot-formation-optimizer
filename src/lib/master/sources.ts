@@ -81,7 +81,7 @@ export const SITE_PROFILES: Record<SourceSite, SiteProfile> = {
     label: 'アルテマ（日本語攻略サイト）',
     reliability: 'community',
     priority: 3,
-    description: '日本語の攻略サイト。討伐・競技場の編成ルール（前列 2・後列 3）や討伐ランキングの出典として参照。',
+    description: '日本語の攻略サイト。討伐・競技場の編成ルール（前列 2・後列 3）や討伐ランキング、スキルの日本語名の出典として参照。',
   },
   user: { site: 'user', label: '手入力', reliability: 'official', priority: 0, description: 'ユーザーが直接入力・修正した値。' },
   estimate: {
@@ -203,6 +203,13 @@ export const SRC = {
     url: 'https://altema.jp/kingshot/dai4sedai',
     fetchedAt: '2026-10-29T00:00:00Z',
     reliability: 'community',
+  } as SourceRef,
+  altemaGenerations: {
+    site: 'altema.jp',
+    url: 'https://altema.jp/kingshot/dai1sedai',
+    fetchedAt: '2026-10-31T00:00:00Z',
+    reliability: 'community',
+    note: '第1〜第7世代・エピック英雄のスキル日本語名（説明文の数値で英語版と照合）',
   } as SourceRef,
   altemaRanking: {
     site: 'altema.jp',

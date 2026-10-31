@@ -175,3 +175,13 @@ test('公式 Wiki 日本語版: 英雄名・スキル名（英語版と同じ順
   assert.deepEqual(r.skillNames, ['三段斬り', '臨戦態勢', '双剣防御']);
   assert.equal(r.widgetName, '運命の盾');
 });
+
+test('スキルの日本語名: 英雄ごとに引き、表記ゆれを吸収する', async () => {
+  const { skillNameJa } = await import('../src/lib/master/skillNamesJa');
+  assert.equal(skillNameJa('hilde', 'Intimidation'), '教化');
+  assert.equal(skillNameJa('charles', 'Intimidation'), 'パンツァーオーラ');
+  assert.equal(skillNameJa('margot', 'Ambush'), 'トリックアタック');
+  assert.equal(skillNameJa('yang', 'Ambush'), 'アンブッシュ');
+  assert.equal(skillNameJa('saul', 'Rapidfire'), '連続射撃');
+  assert.equal(skillNameJa('vivian', 'Gilded Barrage'), undefined);
+});

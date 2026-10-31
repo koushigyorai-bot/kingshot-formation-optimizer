@@ -13,7 +13,7 @@ import type {
   WidgetMaster,
 } from '../types';
 import { buildSeedHeroes } from './heroes';
-import { SKILL_JA } from './skillNamesJa';
+import { skillNameJa } from './skillNamesJa';
 import { parseSkillDescription } from '../crawler/parseSkill';
 import { SITE_PROFILES, SRC, sitePriority } from './sources';
 
@@ -254,7 +254,11 @@ export function reparseSkills(master: MasterData): MasterData {
     ...master,
     heroes: master.heroes.map((h) => ({
       ...h,
-      skills: h.skills.map((s) => ({ ...s, ...(s.nameJa ? {} : SKILL_JA[s.name] ? { nameJa: SKILL_JA[s.name] } : {}), effects: parseSkillDescription(s.description) })),
+      skills: h.skills.map((s) => {
+        // 公式 Wiki 日本語版から取れた名前を優先し、無いときだけ内蔵の対応表で補う
+        const ja = s.nameJa ? undefined : skillNameJa(h.id, s.name);
+        return { ...s, ...(ja ? { nameJa: ja } : {}), effects: parseSkillDescription(s.description) };
+      }),
     })),
   };
 }

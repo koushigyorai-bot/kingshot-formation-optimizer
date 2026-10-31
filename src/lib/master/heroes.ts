@@ -15,8 +15,7 @@ function skill(name: string, kind: SkillKind, description: string, nameJa?: stri
   return { name, kind, description, effects: parseSkillDescription(description), ...(nameJa ? { nameJa } : {}) };
 }
 
-export { SKILL_JA } from './skillNamesJa';
-import { SKILL_JA } from './skillNamesJa';
+import { skillNameJa } from './skillNamesJa';
 
 /* ------------------------------------------------------------------ */
 /* 推定値                                                              */
@@ -268,7 +267,10 @@ export function buildSeedHeroes(): HeroMaster[] {
     const estimatedFields: HeroMaster['estimatedFields'] = [];
     const conquest = v?.conquest ?? (estimatedFields.push('conquest'), estimatedConquest(r.rarity, r.generation, r.troop));
     const expedition = v?.expedition ?? (estimatedFields.push('expedition'), estimatedExpedition(r.rarity, r.generation));
-    const skills = (v?.skills ?? []).map((sk) => (SKILL_JA[sk.name] && !sk.nameJa ? { ...sk, nameJa: SKILL_JA[sk.name] } : sk));
+    const skills = (v?.skills ?? []).map((sk) => {
+      const ja = sk.nameJa ? undefined : skillNameJa(r.id, sk.name);
+      return ja ? { ...sk, nameJa: ja } : sk;
+    });
     const hasExpeditionSkills = skills.some((s) => s.kind === 'expedition');
     if (!hasExpeditionSkills && r.rarity !== 'rare') estimatedFields.push('skills');
 
