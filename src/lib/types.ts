@@ -266,7 +266,7 @@ export interface StatBlock {
 export interface UserBuffs {
   /** 研究（兵種別、%） */
   research: Record<TroopType, StatBlock>;
-  /** 知事スキル（全兵種、%） */
+  /** 役職スキル（全兵種、%）。英語版の Governor skills */
   governorSkills: StatBlock;
   vipLevel: number; // 0〜12
   /**

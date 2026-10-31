@@ -14,7 +14,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'heroes', label: '英雄' },
   { id: 'lordGear', label: '領主装備' },
   { id: 'troops', label: '兵士' },
-  { id: 'buffs', label: '領主バフ・設定' },
+  { id: 'buffs', label: '研究・その他のバフ' },
   { id: 'data', label: '保存・入出力' },
 ];
 
@@ -253,38 +253,54 @@ function BuffsTab() {
   const setBuffs = (patch: Partial<UserData['buffs']>) => setUser((u) => ({ ...u, buffs: { ...u.buffs, ...patch } }));
   return (
     <div className="space-y-4">
-      <div className="panel space-y-3 p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-semibold">戦闘レポートの最終ステータスで上書き（推奨）</h3>
-          <Toggle label={b.reportOverride.enabled ? '上書き中' : '使わない'} checked={b.reportOverride.enabled} onChange={(v) => setBuffs({ reportOverride: { ...b.reportOverride, enabled: v } })} />
-        </div>
-        <p className="text-sm text-ink-soft">
-          戦闘レポートの「ステータスボーナス」には、研究・領主装備・VIP・知事スキルなどの合計が兵種別に表示されます。これを入力すると、下の個別入力と領主装備の換算は使わずにこの値で計算します。
-        </p>
-        {b.reportOverride.enabled &&
-          TROOP_TYPES.map((t) => (
-            <div key={t}>
-              <p className="mb-1 text-sm font-medium">{TROOP_LABEL[t]}</p>
-              <StatInputs value={b.reportOverride.stats[t]} onChange={(v) => setBuffs({ reportOverride: { ...b.reportOverride, stats: { ...b.reportOverride.stats, [t]: v } } })} />
-            </div>
-          ))}
-      </div>
+      <Notice>
+        ここでは<b>研究</b>と<b>役職スキル</b>のボーナスを入力します。<b>領主装備の分は「領主装備」タブで入力するので、ここには含めないでください</b>
+        （ゲームのステータス画面に出る合計値をそのまま入れると、領主装備の分を二重に数えてしまいます）。英雄・英雄装備の効果は「英雄」タブの入力から自動で計算します。
+      </Notice>
 
       <fieldset className={`panel space-y-3 p-3 ${b.reportOverride.enabled ? 'opacity-50' : ''}`} disabled={b.reportOverride.enabled}>
-        <h3 className="font-semibold">研究（兵種別）</h3>
+        <div>
+          <h3 className="font-semibold">研究（兵種別）</h3>
+          <p className="text-xs text-ink-soft">研究所などの科学研究で解放した、兵種別のボーナス（%）だけを入力します。分からなければ 0 のままで構いません（スコアが控えめになるだけです）。</p>
+        </div>
         {TROOP_TYPES.map((t) => (
           <div key={t}>
             <p className="mb-1 text-sm font-medium">{TROOP_LABEL[t]}</p>
-            <StatInputs value={b.research[t]} onChange={(v) => setBuffs({ research: { ...b.research, [t]: v } })} />
+            <StatInputs value={b.research[t]} onChange={(v) => setBuffs({ research: { ...b.research, [t]: v } })} prefix={TROOP_LABEL[t]} />
           </div>
         ))}
-        <h3 className="pt-2 font-semibold">知事スキル（全兵種）</h3>
+        <div className="pt-2">
+          <h3 className="font-semibold">役職スキル（全兵種）</h3>
+          <p className="text-xs text-ink-soft">役職スキルで得た、全兵種に掛かるボーナス（%）を入力します。</p>
+        </div>
         <StatInputs value={b.governorSkills} onChange={(v) => setBuffs({ governorSkills: v })} />
         <div className="max-w-xs pt-2">
           <NumberField label="VIP レベル" limit="vipLevel" value={b.vipLevel} onChange={(v) => setBuffs({ vipLevel: v })} />
           <p className="mt-1 text-[11px] text-ink-mute">VIP の戦闘効果量は確認できなかったため、計算には使っていません。</p>
         </div>
       </fieldset>
+
+      <details className="panel p-3" open={b.reportOverride.enabled}>
+        <summary className="cursor-pointer font-semibold">上級者向け: 兵種ボーナスを合計値で直接指定する</summary>
+        <div className="mt-3 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Toggle label={b.reportOverride.enabled ? '合計値を使う' : '使わない'} checked={b.reportOverride.enabled} onChange={(v) => setBuffs({ reportOverride: { ...b.reportOverride, enabled: v } })} />
+          </div>
+          <p className="text-sm text-ink-soft">
+            オンにすると、上の研究・役職スキルと「領主装備」タブの値は<b>計算に使わず</b>、ここに入力した兵種別の合計値だけを使います（入力済みの値は消えません。オフに戻せば再び使われます）。
+          </p>
+          <Notice tone="warn">
+            ゲームの合計値に英雄や英雄装備の分が含まれている場合、このツールはそこへ英雄の分をさらに加算するため二重計上になります。通常は「使わない」のまま、各タブで個別に入力することをおすすめします。
+          </Notice>
+          {b.reportOverride.enabled &&
+            TROOP_TYPES.map((t) => (
+              <div key={t}>
+                <p className="mb-1 text-sm font-medium">{TROOP_LABEL[t]}</p>
+                <StatInputs value={b.reportOverride.stats[t]} onChange={(v) => setBuffs({ reportOverride: { ...b.reportOverride, stats: { ...b.reportOverride.stats, [t]: v } } })} prefix={TROOP_LABEL[t]} />
+              </div>
+            ))}
+        </div>
+      </details>
 
       <div className="panel p-3">
         <h3 className="mb-2 font-semibold">サーバー</h3>

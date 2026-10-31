@@ -81,7 +81,7 @@ export function troopBase(t: TroopType, level: number, truegold = 0, cfg: CalcCo
 /**
  * 兵種ごとのステータス補正（%）。
  * 戦闘レポート上書きが有効ならその値をそのまま使い、
- * 無効なら研究 + 知事スキル + VIP + 領主装備（部位ごとの入力値 + セット効果）を合算する。
+ * 無効なら研究 + 役職スキル + VIP + 領主装備（部位ごとの入力値 + セット効果）を合算する。
  */
 export function troopStatBonus(user: UserData, t: TroopType, cfg: CalcConfig = DEFAULT_CONFIG): StatBlock {
   const ro = user.buffs.reportOverride;
