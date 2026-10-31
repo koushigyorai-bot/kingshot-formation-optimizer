@@ -13,6 +13,7 @@ import type {
   WidgetMaster,
 } from '../types';
 import { buildSeedHeroes } from './heroes';
+import { SKILL_JA } from './skillNamesJa';
 import { parseSkillDescription } from '../crawler/parseSkill';
 import { SITE_PROFILES, SRC, sitePriority } from './sources';
 
@@ -253,7 +254,7 @@ export function reparseSkills(master: MasterData): MasterData {
     ...master,
     heroes: master.heroes.map((h) => ({
       ...h,
-      skills: h.skills.map((s) => ({ ...s, effects: parseSkillDescription(s.description) })),
+      skills: h.skills.map((s) => ({ ...s, ...(s.nameJa ? {} : SKILL_JA[s.name] ? { nameJa: SKILL_JA[s.name] } : {}), effects: parseSkillDescription(s.description) })),
     })),
   };
 }

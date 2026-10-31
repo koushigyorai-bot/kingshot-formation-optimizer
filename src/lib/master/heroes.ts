@@ -15,23 +15,8 @@ function skill(name: string, kind: SkillKind, description: string, nameJa?: stri
   return { name, kind, description, effects: parseSkillDescription(description), ...(nameJa ? { nameJa } : {}) };
 }
 
-/** 公式 Wiki 日本語版で確認したスキル名（英語名 → 日本語名）。データ更新で他の英雄の分も自動で入る */
-const SKILL_JA: Record<string, string> = {
-  'Combo Slash': '三段斬り',
-  'Arcane Swordship': '剣気',
-  Onslaught: '快進撃',
-  'Battle Ready': '臨戦態勢',
-  'Way of the Blade': '剣術指導',
-  'Unrighteous Strike': '不義の一撃',
-  'Born Leader': '天性のリーダー',
-  'Double Parry': '双剣防御',
-  Discernment: '真実の術',
-  'BBQ Feast': 'バーベキュー',
-  'Culinary Chaos': '嵐の厨房',
-  'Emergency Snack': '非常食',
-  'Super Nutrients': '幸せグルメ',
-  'Trash Talk': '暴言',
-};
+export { SKILL_JA } from './skillNamesJa';
+import { SKILL_JA } from './skillNamesJa';
 
 /* ------------------------------------------------------------------ */
 /* 推定値                                                              */
