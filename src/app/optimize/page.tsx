@@ -82,7 +82,25 @@ export default function OptimizePage() {
           )}
           {rule.skillSet === 'expedition' && <Toggle label="兵種比率も最適化" checked={req.optimizeRatio} onChange={(v) => setReq((r) => ({ ...r, optimizeRatio: v }))} />}
           {rule.skillSet === 'conquest' && (
-            <span className="text-sm text-ink-soft">英雄 5 人（前列 2・後列 3）。兵士は使わないため、兵種比率と相手の兵種構成は計算に使いません。</span>
+            <div className="space-y-1">
+              <label className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-ink-soft">相手の強さ</span>
+                <input
+                  type="number"
+                  min={30}
+                  max={300}
+                  step={10}
+                  className="input w-24"
+                  value={req.enemyPower ?? 100}
+                  onChange={(e) => setReq((r) => ({ ...r, enemyPower: Math.max(30, Math.min(300, Number(e.target.value) || 100)) }))}
+                  aria-label="相手の強さ（%）"
+                />
+                <span className="text-ink-soft">%</span>
+              </label>
+              <p className="text-[11px] text-ink-mute">
+                あなたの所持英雄の上位 5 人を 100% とした相手の強さです。格上と戦うなら 120% など大きく、格下なら小さくします。相手が強いほど、前列が先に倒れてスキルを撃てない英雄の評価が下がります。英雄 5 人（前列 2・後列 3）。兵士は使わないため、兵種比率は計算に使いません。
+              </p>
+            </div>
           )}
         </div>
 
@@ -245,6 +263,24 @@ function ResultCard({
         {open && (
           <div className="mt-2 grid gap-4 pb-2 text-sm md:grid-cols-2">
             {r.score.heroContrib && r.score.heroContrib.length > 0 && <HeroContribTable contrib={r.score.heroContrib} heroes={heroes} />}
+            {heroBattle ? (
+              <table className="w-full text-left">
+                <tbody className="[&_td]:py-0.5">
+                  <tr>
+                    <td className="text-ink-soft">相手を削った割合</td>
+                    <td className="text-right font-mono">{r.score.eventAdjusted.toFixed(0)}%</td>
+                  </tr>
+                  <tr>
+                    <td className="text-ink-soft">味方の残り HP</td>
+                    <td className="text-right font-mono">{((f.survival ?? 0) * 100).toFixed(0)}%</td>
+                  </tr>
+                  <tr className="border-t border-parchment-line font-semibold">
+                    <td>スコア（削った割合 + 残りHP × 0.5）</td>
+                    <td className="text-right font-mono">{r.score.total.toFixed(1)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            ) : (
             <table className="w-full text-left">
               <tbody className="[&_td]:py-0.5">
                 <tr>
@@ -291,6 +327,7 @@ function ResultCard({
                 </tr>
               </tbody>
             </table>
+            )}
             <div className="space-y-2">
               {r.score.perTroop && !joiner && (
                 <div>

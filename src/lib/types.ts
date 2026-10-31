@@ -313,6 +313,8 @@ export interface OptimizeRequest {
   role: MarchRole;
   /** 3 人編成で「歩兵・騎兵・弓兵を 1 人ずつ」に制限するか */
   oneHeroPerTroop: boolean;
+  /** 討伐戦闘: 比較相手の強さ（所持英雄の上位 5 人を 100 とした %） */
+  enemyPower?: number;
   /** 編成人数を上書きする（未指定ならイベント既定値） */
   slotOverride?: 3 | 5;
   /** 相手の兵種構成（兵種相性補正に使う） */

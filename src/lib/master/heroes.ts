@@ -205,6 +205,16 @@ const VERIFIED: Record<string, VerifiedPatch> = {
     sources: [SRC.bluestacksGen1],
     complete: false,
   },
+  alcar: {
+    conquest: { attack: 3150, defense: 4106, health: 61604 },
+    skills: [
+      skill('Boneshatter', 'conquest', 'Alcar spears a line of enemies, dealing Attack*70%/77%/84%/91%/98% damage. Enemies hit take 20% increased damage for 2s.'),
+      skill('Glorious Mark', 'conquest', 'Alcar becomes invulnerable, unable to move or cast skills but immune to control effects, for 2s. During this time, nearby friendly squads take 30%/40%/50%/60%/70% reduced damage.'),
+      skill('Second Wind', 'conquest', 'When "Glorious Mark" activates, Alcar restores Attack*30%/33%/36%/39%/42% Health every second for 5s.'),
+    ],
+    sources: [{ ...SRC.fanHero('alcar'), fetchedAt: '2026-10-31T00:00:00Z', note: '討伐ステータス・討伐スキル' }],
+    complete: false,
+  },
   petra: {
     skills: [
       skill('Dichotomy', 'conquest', "Petra throws a tarot card at an enemy, dealing Attack*270%/297%/324%/351%/378% damage and inflicting one of the following effects: reducing the target's Attack by 20% for 2s or stunning the target for 1.5s"),

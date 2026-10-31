@@ -34,6 +34,7 @@ import { effectValueAt } from '../crawler/parseSkill';
 import { COUNTERS, EVENT_RULES, type EventRule } from '../master/events';
 import { DEFAULT_CONFIG, type CalcConfig } from './config';
 import { heroGearTroopBonus } from './heroGear';
+import { simulateBattle, toSimSkill, type SimResult, type SimSkill, type SimUnit } from './battleSim';
 
 export const TROOP_LABEL: Record<TroopType, string> = { infantry: '歩兵', cavalry: '騎兵', archer: '弓兵' };
 
@@ -427,104 +428,141 @@ export interface HeroBattleStats {
   attack: number;
   defense: number;
   health: number;
-  ehp: number;
-  dps: number;
+  deathTime: number | null;
+  casts: number;
+  damage: number;
+}
+
+/** 英雄 1 人分の討伐ステータス（成長・装備・ウィジェット込み） */
+export function heroBattleBase(h: HeroMaster, o: OwnedHero, cfg: CalcConfig = DEFAULT_CONFIG) {
+  const g = heroGrowth(o, cfg) * heroGearFactor(o, cfg);
+  const wRatio = o.widget.owned && h.widget ? Math.min(1, o.widget.level / cfg.widgetMaxLevel.value) : 0;
+  const wc = h.widget?.conquest ?? {};
+  return {
+    growth: g,
+    attack: h.conquest.attack * g + (wc.attack ?? 0) * wRatio,
+    defense: h.conquest.defense * g + (wc.defense ?? 0) * wRatio,
+    health: h.conquest.health * g + (wc.health ?? 0) * wRatio,
+  };
+}
+
+/** 英雄を戦闘ユニットに変換（討伐スキルを発動タイミング付きで持たせる） */
+export function toSimUnit(h: HeroMaster, o: OwnedHero, front: boolean, mismatch: number, cfg: CalcConfig = DEFAULT_CONFIG): SimUnit {
+  const b = heroBattleBase(h, o, cfg);
+  const skills: SimSkill[] = [];
+  h.skills
+    .filter((s) => s.kind === 'conquest')
+    .forEach((s, i) => {
+      const sim = toSimSkill(s, o.conquestSkills[i] ?? 0, i, cfg);
+      if (sim) skills.push(sim);
+    });
+  if (o.widget.owned && o.widget.level > 0) {
+    h.skills
+      .filter((s) => s.kind === 'widget_conquest')
+      .forEach((s, i) => {
+        const sim = toSimSkill(s, widgetSkillLevel(o.widget.level), 3 + i, cfg);
+        if (sim) skills.push(sim);
+      });
+  }
+  return { id: h.id, name: h.name, front, maxHp: b.health, attack: b.attack, defense: b.defense, mismatch, skills };
+}
+
+/**
+ * 比較相手のチーム。所持英雄の中から 前列 2（耐久の高い順）・後列 3（攻撃の高い順）を選び、
+ * 「相手の強さ（%）」で全ステータスを拡大・縮小する。スキルは持たせず、火力を enemySkillFactor 倍にする。
+ */
+export function buildReferenceEnemy(pool: HeroMaster[], user: UserData, powerPct: number, cfg: CalcConfig = DEFAULT_CONFIG): SimUnit[] {
+  const scored = pool
+    .map((h) => ({ h, o: user.heroes[h.id]! }))
+    .filter((x) => x.o)
+    .map((x) => ({ ...x, b: heroBattleBase(x.h, x.o, cfg) }));
+  if (scored.length === 0) return [];
+  const front = [...scored].sort((a, b) => b.b.health * (1 + b.b.defense / 10000) - a.b.health * (1 + a.b.defense / 10000)).slice(0, 2);
+  const rest = scored.filter((x) => !front.includes(x)).sort((a, b) => b.b.attack - a.b.attack).slice(0, 3);
+  const k = Math.max(0.05, powerPct / 100);
+  return [...front.map((x) => ({ x, f: true })), ...rest.map((x) => ({ x, f: false }))].map(({ x, f }, i) => ({
+    id: `enemy-${i}`,
+    name: `相手${i + 1}`,
+    front: f,
+    maxHp: x.b.health * k,
+    attack: x.b.attack * k * cfg.enemySkillFactor.value,
+    defense: x.b.defense * k,
+    mismatch: 1,
+    skills: [],
+  }));
 }
 
 export function scoreHeroBattle(
   formation: HeroMaster[],
   user: UserData,
   event: EventType,
-  enemy: TroopRatio,
+  _enemyRatio: TroopRatio,
   allHeroes: Map<string, HeroMaster>,
   cfg: CalcConfig = DEFAULT_CONFIG,
-): ScoreBreakdown & { heroes: HeroBattleStats[] } {
+  enemyTeam?: SimUnit[],
+  enemyPowerPct = 100,
+): ScoreBreakdown & { heroes: HeroBattleStats[]; sim: SimResult } {
   const rule = EVENT_RULES[event];
   const positions = rule.positions ?? [];
-  const team = collectSkills(formation, user, 'conquest', 'leader', allHeroes);
   const notes: string[] = [];
 
-  // 味方全体に掛かる効果（scope = heroes / squad）
-  const teamAttack = get(team.all, 'squadAttack');
-  const enemyTakenUp = get(team.all, 'enemyDamageTakenUp');
-  const healPct = get(team.all, 'heal');
-
-  let base = 0;
-  let adjusted = 0;
-  let totalDps = 0;
-  let frontEhp = 0;
-  const stats: HeroBattleStats[] = [];
-  const contrib: HeroContribution[] = [];
-
+  const units: SimUnit[] = [];
   formation.forEach((h, idx) => {
     const o = user.heroes[h.id];
     if (!o) return;
-    const own = collectSkills([h], user, 'conquest', 'leader', allHeroes);
-    const g = heroGrowth(o, cfg) * heroGearFactor(o, cfg);
-    const wRatio = o.widget.owned && h.widget ? Math.min(1, o.widget.level / cfg.widgetMaxLevel.value) : 0;
-    const wc = h.widget?.conquest ?? {};
-
-    const rawAtk = h.conquest.attack * g + (wc.attack ?? 0) * wRatio;
-    const rawDef = h.conquest.defense * g + (wc.defense ?? 0) * wRatio;
-    const rawHp = h.conquest.health * g + (wc.health ?? 0) * wRatio;
-    base += rawAtk + rawDef + rawHp / 10;
-
-    // heroDefense は scope=heroes のものをチーム全体、self は本人のみ
-    const heroesDef = team.contributions
-      .filter((c) => c.stat === 'heroDefense')
-      .reduce((s, c) => {
-        const src = allHeroes.get(c.heroId);
-        const eff = src?.skills.find((sk) => sk.name === c.skill)?.effects.find((e) => e.stat === 'heroDefense');
-        return s + (eff?.scope === 'heroes' || c.heroId === h.id ? c.value : 0);
-      }, 0);
-
-    const attack = rawAtk * (1 + (get(own.all, 'heroAttack') + teamAttack) / 100);
-    const defense = rawDef * (1 + heroesDef / 100);
-    const health = rawHp * (1 + get(own.all, 'heroHealth') / 100);
-    const dtd = Math.min(cfg.maxDamageReduction.value, get(own.all, 'damageTakenDown') / 100);
-
     const pos = positions[idx];
+    const front = pos ? pos.label === '前列' : idx < 2;
     const mismatch = pos?.preferred && !pos.preferred.includes(h.troop) ? cfg.positionMismatchPenalty.value : 1;
     if (mismatch < 1) notes.push(`${h.name}（${TROOP_LABEL[h.troop]}）は${pos?.label}に不向き（推奨: ${pos?.preferred?.map((t) => TROOP_LABEL[t]).join('・')}）`);
+    if (h.estimatedFields?.includes('conquest')) notes.push(`${h.name}: 討伐ステータスが推定値`);
+    units.push(toSimUnit(h, o, front, mismatch, cfg));
+  });
 
-    const ehp = ((health * (1 + defense / 10000)) / (1 - dtd)) * (pos?.label === '前列' ? mismatch : 1);
-    // 討伐戦闘は兵士を使わないため、兵種相性の補正は掛けない（アルテマ）
-    const counter = 1;
-    const skillMul = 1 + (get(own.all, 'skillDamage') / 100) * cfg.conquestSkillWeight.value;
-    // 前列の不適合は耐久に、後列の不適合は火力に効かせる
-    const isFront = pos?.label === '前列' || (!positions.length && idx === 0);
-    const dps = attack * skillMul * counter * (1 + enemyTakenUp / 100) * (isFront ? 1 : mismatch);
+  const pool = [...allHeroes.values()].filter((h) => user.heroes[h.id]?.owned);
+  const enemy = enemyTeam ?? buildReferenceEnemy(pool, user, enemyPowerPct, cfg);
+  const sim = simulateBattle(units, enemy, cfg);
 
-    adjusted += attack * skillMul * counter;
-    totalDps += dps;
-    if (isFront) frontEhp += ehp;
-    stats.push({ heroId: h.id, attack, defense, health, ehp, dps });
+  const stats: HeroBattleStats[] = [];
+  const contrib: HeroContribution[] = [];
+  let base = 0;
+  formation.forEach((h) => {
+    const o = user.heroes[h.id];
+    const u = units.find((x) => x.id === h.id);
+    const r = sim.units.find((x) => x.id === h.id);
+    if (!o || !u || !r) return;
+    const b = heroBattleBase(h, o, cfg);
+    base += b.attack + b.defense + b.health / 10;
+    stats.push({ heroId: h.id, attack: u.attack, defense: u.defense, health: u.maxHp, deathTime: r.deathTime, casts: r.casts, damage: r.damage });
+    const alive = r.deathTime === null ? `最後まで生存（HP ${Math.round(r.hpLeft * 100)}%）` : `${r.deathTime.toFixed(1)} 秒で撃破`;
+    const castText = r.castableSkills ? `・スキル発動 ${r.casts} 回` : '';
     contrib.push({
       heroId: h.id,
       level: o.level,
       stars: o.stars,
-      growth: g,
-      statText: `攻撃 ${Math.round(attack).toLocaleString()} ・ 実効HP ${Math.round(ehp).toLocaleString()}（補正 ${g.toFixed(2)}）`,
-      skills: own.contributions.map(({ skill, stat, value }) => ({ skill, stat, value })),
+      growth: b.growth,
+      statText: `${alive}${castText}・与ダメ ${Math.round(r.damage).toLocaleString()}（攻撃 ${Math.round(u.attack).toLocaleString()} / HP ${Math.round(u.maxHp).toLocaleString()}）`,
+      skills: u.skills.flatMap((s) => s.effects.map((e) => ({ skill: `${s.name}${s.mode === 'passive' ? '' : s.mode === 'trigger' ? '（HP50%以下で発動）' : `（${s.firstCast}秒〜）`}`, stat: e.stat, value: e.value }))),
       missingSkills: !h.skills.some((sk) => sk.kind === 'conquest'),
       estimatedStats: !!h.estimatedFields?.includes('conquest'),
     });
-    if (h.estimatedFields?.includes('conquest')) notes.push(`${h.name}: 討伐ステータスが推定値`);
+    if (r.castableSkills > 0 && r.casts === 0 && r.deathTime !== null) notes.push(`${h.name} はスキルを発動する前に倒される見込み（${r.deathTime.toFixed(1)} 秒）`);
   });
 
-  const sustain = 1 + healPct / 1000;
-  const survival = Math.sqrt(Math.max(0, frontEhp * sustain) / 10000);
-  const total = totalDps * survival;
-  if (frontEhp === 0) notes.push('前列がいないため生存係数が 0 になっています');
+  notes.unshift(
+    sim.win
+      ? `比較相手（所持英雄の上位 5 人 × ${enemyPowerPct}%）に ${sim.duration.toFixed(1)} 秒で勝利する見込み`
+      : `比較相手（所持英雄の上位 5 人 × ${enemyPowerPct}%）を ${Math.round(sim.enemyDestroyed * 100)}% まで削って敗北・時間切れの見込み`,
+  );
 
   return {
     base,
-    eventAdjusted: adjusted,
-    total,
-    factors: { skillBuff: 1 + enemyTakenUp / 100, counter: 1, widget: 1, lethality: 1, squadAttack: 1 + teamAttack / 100, crit: 1, survival },
+    eventAdjusted: sim.enemyDestroyed * 100,
+    total: sim.score,
+    factors: { skillBuff: 1, counter: 1, widget: 1, lethality: 1, squadAttack: 1, crit: 1, survival: sim.ownHpLeft },
     heroContrib: contrib,
     notes,
     heroes: stats,
+    sim,
   };
 }
 

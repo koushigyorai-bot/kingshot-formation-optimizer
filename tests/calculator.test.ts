@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { heroById, mergeMasterData, seedMasterData, type CrawlSnapshot } from '../src/lib/master';
 import { createDefaultUserData } from '../src/lib/validation/userData';
 import {
+  scoreHeroBattle,
+  buildReferenceEnemy,
   collectSkills,
   counterFactor,
   geneticSearch,
@@ -221,4 +223,31 @@ test('兵士: 黄金レベルはレベル 10 の兵だけを強化する', async
   assert.equal(troopBase('archer', 6).attack, 974);
   assert.ok(troopBase('archer', 10, 3).attack > troopBase('archer', 10, 0).attack);
   assert.equal(troopBase('archer', 9, 3).attack, troopBase('archer', 9, 0).attack);
+});
+
+test('討伐戦闘: 早く倒れる英雄はスキルを撃てず、相手が強いほどスコアが下がる', async () => {
+  const { simulateBattle } = await import('../src/lib/calculator/battleSim');
+  const { DEFAULT_CONFIG } = await import('../src/lib/calculator');
+  const skill = { name: 'Nuke', effects: [{ stat: 'skillDamage' as const, value: 500, scope: 'self' as const }], mode: 'active' as const, firstCast: 6, cooldown: 8, duration: 0, hits: 1, healBase: 'attack' as const, healTarget: 'self' as const };
+  const unit = (id: string, front: boolean, hp: number, atk: number, skills = [] as (typeof skill)[]) => ({ id, name: id, front, maxHp: hp, attack: atk, defense: 0, mismatch: 1, skills });
+  const enemy = [unit('e1', true, 20000, 1500), unit('e2', true, 20000, 1500), unit('e3', false, 15000, 2000), unit('e4', false, 15000, 2000), unit('e5', false, 15000, 2000)];
+  const weakFront = [unit('a', true, 5000, 1000, [skill]), unit('b', true, 30000, 1000), unit('c', false, 15000, 2000), unit('d', false, 15000, 2000), unit('x', false, 15000, 2000)];
+  const r = simulateBattle(weakFront, enemy, DEFAULT_CONFIG);
+  const a = r.units.find((u) => u.id === 'a')!;
+  assert.ok(a.deathTime !== null && a.deathTime < 6, `早期撃破 ${a.deathTime}`);
+  assert.equal(a.casts, 0, '6 秒目のスキルは撃てない');
+  const strong = enemy.map((e) => ({ ...e, maxHp: e.maxHp * 1.5, attack: e.attack * 1.5 }));
+  assert.ok(simulateBattle(weakFront, strong, DEFAULT_CONFIG).score < r.score);
+});
+
+test('討伐戦闘: 星が高いほど評価が上がる（星 1 のアルカ < 星 4 のアルカ）', () => {
+  const owned = ['zoe', 'alcar', 'margot', 'rosa', 'petra', 'eric', 'amadeus', 'jaeger'];
+  const lo = account(owned, (u) => (u.heroes.alcar!.stars = 1));
+  const hi = account(owned, (u) => (u.heroes.alcar!.stars = 4));
+  const f = ['zoe', 'alcar', 'margot', 'rosa', 'petra'].map((id) => H.get(id)!);
+  // 同じ相手で比べる（相手は所持英雄の上位 5 人から作るので、育成すると相手も強くなるため）
+  const enemy = buildReferenceEnemy(owned.map((id) => H.get(id)!), lo, 100);
+  const sLo = scoreHeroBattle(f, lo, 'arena', { infantry: 0, cavalry: 0, archer: 0 }, H, undefined, enemy);
+  const sHi = scoreHeroBattle(f, hi, 'arena', { infantry: 0, cavalry: 0, archer: 0 }, H, undefined, enemy);
+  assert.ok(sHi.total > sLo.total);
 });

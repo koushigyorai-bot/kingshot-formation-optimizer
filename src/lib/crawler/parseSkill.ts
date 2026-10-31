@@ -62,7 +62,7 @@ const RULES: Rule[] = [
   { test: /rally (squads?'? )?attack/i, stat: 'rallyAttack', scope: 'squad' },
   { test: /enemy[^.]{0,40}\battack\b[^.]{0,30}(reduc|decreas|lower)|(reduc|decreas|lower)[^.]{0,40}enemy[^.]{0,30}\battack\b/i, stat: 'enemyAttackDown', scope: 'enemy' },
   { test: /(damage taken by (the )?(target|enem)|enem[^.]{0,30}damage taken)[^.]{0,30}(increas|amplif)|(amplif|increas)[^.]{0,30}damage taken by (the )?(target|enem)/i, stat: 'enemyDamageTakenUp', scope: 'enemy' },
-  { test: /(reduc|decreas|lower)[^.]{0,40}damage taken|damage taken[^.]{0,20}(reduc|decreas)/i, stat: 'damageTakenDown', scope: 'squad' },
+  { test: /(reduc|decreas|lower)[^.]{0,40}damage taken|damage taken[^.]{0,20}(reduc|decreas)|take[^.]{0,30}reduced damage/i, stat: 'damageTakenDown', scope: 'squad' },
   { test: /lethality/i, stat: 'lethality', scope: 'squad' },
   // "Squads' Attack" / "Squads' total Attack" / "Escorts' Attack"（Conquest の護衛兵）
   { test: /(squads?'?|troops'?|escorts'?)\s*(total\s+)?attack|attack.{0,40}?for all troops|(infantry|cavalry|archer)s?'?\s+attack/i, stat: 'squadAttack', scope: 'squad' },
@@ -70,7 +70,7 @@ const RULES: Rule[] = [
   { test: /(squads?'?|troops'?|escorts'?)\s*(total\s+)?defen[cs]e/i, stat: 'squadDefense', scope: 'squad' },
   { test: /critical (hit )?(rate|chance)/i, stat: 'critRate', scope: 'squad' },
   { test: /critical (hit )?damage/i, stat: 'critDamage', scope: 'squad' },
-  { test: /(dealing|deals?|deal)[^.]{0,20}attack\s*[*×x]\s*\d|attack\s*[*×x]\s*\d[^.]{0,40}damage/i, stat: 'skillDamage', scope: 'self' },
+  { test: /(dealing|deals?|deal)[^.]{0,60}attack\s*[*×x]\s*\d|attack\s*[*×x]\s*\d[^.]{0,40}damage/i, stat: 'skillDamage', scope: 'self' },
   // 診療所（Infirmary）の治療速度は戦闘外の効果なので回復に数えない
   { test: /(restor|heal)(?![^.]{0,10}speed)/i, stat: 'heal', scope: 'heroes' },
   { test: /damage dealt/i, stat: 'damageUp', scope: 'squad' },
@@ -194,7 +194,7 @@ export function parseSkillDescription(description: string): SkillEffect[] {
     const values = series[Math.min(i, series.length - 1)]!;
     const rule = RULES.find((r) => r.stat === stat)!;
     let scope = rule.scope;
-    if (stat === 'damageTakenDown' && !/(all troops|squads|our troops|all heroes)/i.test(text)) scope = 'self';
+    if (stat === 'damageTakenDown' && !/(all troops|squads|our troops|all heroes|friendly)/i.test(text)) scope = 'self';
     if (stat === 'heroDefense' && /all heroes/i.test(text)) scope = 'heroes';
     effects.push({ stat, values, scope, ...(troop && scope === 'squad' ? { troop } : {}) });
   });

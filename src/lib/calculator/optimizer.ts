@@ -32,6 +32,7 @@ import {
   precomputeExpedition,
   scoreExpedition,
   scoreHeroBattle,
+  buildReferenceEnemy,
   usesEstimated,
   type ExpeditionPrecomp,
 } from './calculator';
@@ -276,59 +277,52 @@ function searchHeroBattle(ctx: Ctx, pool: HeroMaster[], slots: number) {
   const { user, req, cfg, heroes, preset } = ctx;
   const positions = (EVENT_RULES[req.event].positions ?? []).slice(0, slots);
   const k = Math.min(slots, pool.length);
+  const frontSlots = positions.filter((p) => p.label === '前列').length || Math.min(2, k);
+  const backSlots = k - frontSlots;
 
-  const evaluate = (f: HeroMaster[]) => scoreHeroBattle(f, user, req.event, req.enemyRatio, heroes, cfg);
-  const space = countPermutations(pool.length, k);
-  let method: OptimizeResult['method'];
-  let candidates: HeroMaster[][];
+  // 比較相手は 1 回だけ作る（候補ごとに変えない）
+  const enemy = buildReferenceEnemy(pool, user, req.enemyPower ?? 100, cfg);
+  const evaluate = (f: HeroMaster[]) => scoreHeroBattle(f, user, req.event, req.enemyRatio, heroes, cfg, enemy, req.enemyPower ?? 100);
 
-  // exhaustiveLimit <= 0 は「常に全探索」だが、ブラウザが固まらないよう上限を設ける
-  const HARD_CAP = 2_000_000;
-  if (space <= HARD_CAP && (req.exhaustiveLimit <= 0 || space <= req.exhaustiveLimit)) {
-    // 全探索（位置が意味を持つので順列）
-    method = 'exhaustive';
-    candidates = [];
-    for (const c of combinations(pool, k)) for (const p of permutations(c)) candidates.push(p);
-  } else {
-    // フィルタリング: 位置グループごとに推奨兵種・役割で上位 K 人に絞ってから組み合わせる
+  // 同じ列の中の並び順は結果に影響しない（同じ列の生存者で被ダメを等分）ので、
+  // 前列の組合せ × 後列の組合せ を候補にする
+  const candidates: HeroMaster[][] = [];
+  for (const fr of combinations(pool, Math.min(frontSlots, pool.length))) {
+    const rest = pool.filter((h) => !fr.includes(h));
+    for (const bk of combinations(rest, Math.min(backSlots, rest.length))) candidates.push([...fr, ...bk]);
+    if (candidates.length > 3_000_000) break;
+  }
+
+  // 1 次選抜: 前列の耐久 × 後列の火力 で上位に絞る（タイムライン計算は重いため）
+  const SIM_LIMIT = 2500;
+  let method: OptimizeResult['method'] = 'exhaustive';
+  let shortlist = candidates;
+  if (candidates.length > SIM_LIMIT) {
     method = 'filtered';
-    candidates = filteredCandidates(pool, positions, user, cfg);
-    if (candidates.length === 0) return geneticHeroBattle(ctx, pool, k);
+    const pw = new Map(pool.map((h) => [h.id, heroPower(h, user, cfg)]));
+    const quick = (f: HeroMaster[]) => {
+      let tank = 0;
+      let dps = 0;
+      f.forEach((h, idx) => {
+        const p = pw.get(h.id)!;
+        const pos = positions[idx];
+        const fit = pos?.preferred && !pos.preferred.includes(h.troop) ? cfg.positionMismatchPenalty.value : 1;
+        if (idx < frontSlots) tank += p.tank * fit;
+        dps += p.dps * (idx < frontSlots ? 1 : fit);
+      });
+      return Math.sqrt(tank) * dps;
+    };
+    shortlist = candidates
+      .map((f) => ({ f, q: quick(f) }))
+      .sort((a, b) => b.q - a.q)
+      .slice(0, SIM_LIMIT)
+      .map((x) => x.f);
   }
 
-  const scored = candidates.map((f) => ({ f, s: evaluate(f) }));
+  const scored = shortlist.map((f) => ({ f, s: evaluate(f) }));
   scored.sort((a, b) => b.s.total - a.s.total);
-  const seen = new Set<string>();
-  const results: FormationResult[] = [];
-  for (const { f, s } of scored) {
-    // 同じ位置グループ内の並べ替えは同一編成として扱う
-    const key = groupKey(f, positions);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    results.push(toResult(f, preset, s, 'conquest'));
-    if (results.length >= req.topN) break;
-  }
+  const results = scored.slice(0, req.topN).map(({ f, s }) => toResult(f, preset, s, 'conquest'));
   return { results, searched: candidates.length, method };
-}
-
-function* permutations<T>(xs: T[]): Generator<T[]> {
-  if (xs.length <= 1) {
-    yield [...xs];
-    return;
-  }
-  for (let i = 0; i < xs.length; i++) {
-    const rest = [...xs.slice(0, i), ...xs.slice(i + 1)];
-    for (const p of permutations(rest)) yield [xs[i]!, ...p];
-  }
-}
-
-function groupKey(f: HeroMaster[], positions: Array<{ label: string }>): string {
-  const groups = new Map<string, string[]>();
-  f.forEach((h, i) => {
-    const g = positions[i]?.label ?? String(i);
-    groups.set(g, [...(groups.get(g) ?? []), h.id]);
-  });
-  return [...groups.entries()].map(([g, ids]) => `${g}:${ids.sort().join('+')}`).join('|');
 }
 
 /** 位置グループ（前列/後列）ごとに上位候補を選び、重複なしで組み合わせる */
@@ -483,15 +477,17 @@ function geneticExpedition(ctx: Ctx, pool: HeroMaster[], k: number) {
 
 function geneticHeroBattle(ctx: Ctx, pool: HeroMaster[], k: number) {
   const { user, req, cfg, heroes, preset } = ctx;
-  const ranked = geneticSearch(pool, k, (f) => scoreHeroBattle(f, user, req.event, req.enemyRatio, heroes, cfg).total);
+  const enemy = buildReferenceEnemy(pool, user, req.enemyPower ?? 100, cfg);
+  const ranked = geneticSearch(pool, k, (f) => scoreHeroBattle(f, user, req.event, req.enemyRatio, heroes, cfg, enemy, req.enemyPower ?? 100).total);
   const results = ranked
     .slice(0, req.topN)
-    .map(({ f }) => toResult(f, preset, scoreHeroBattle(f, user, req.event, req.enemyRatio, heroes, cfg), 'conquest'));
+    .map(({ f }) => toResult(f, preset, scoreHeroBattle(f, user, req.event, req.enemyRatio, heroes, cfg, enemy, req.enemyPower ?? 100), 'conquest'));
   return { results, searched: GA_DEFAULT.population * GA_DEFAULT.generations, method: 'genetic' as const };
 }
 
 function toResult(f: HeroMaster[], ratio: TroopRatio, score: FormationResult['score'], skillSet: 'expedition' | 'conquest'): FormationResult {
   const { ...plain } = score as FormationResult['score'] & { heroes?: unknown };
   delete (plain as { heroes?: unknown }).heroes;
+  delete (plain as { sim?: unknown }).sim;
   return { heroIds: f.map((h) => h.id), ratio: normalizeRatio(ratio), score: plain, usesEstimatedData: usesEstimated(f, skillSet) };
 }
