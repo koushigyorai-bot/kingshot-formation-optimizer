@@ -11,6 +11,7 @@
  */
 import type { EffectStat, Skill, SkillEffect } from '../types';
 import { effectValueAt } from '../crawler/parseSkill';
+import { skillName } from '../display';
 import type { CalcConfig } from './config';
 
 export interface SimSkill {
@@ -84,7 +85,7 @@ export function toSimSkill(skill: Skill, level: number, slotIndex: number, cfg: 
       : 'self';
 
   const base = {
-    name: skill.name,
+    name: skillName(skill),
     effects,
     duration: 0,
     hits: 1,

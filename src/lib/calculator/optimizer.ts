@@ -24,6 +24,7 @@ import type {
 } from '../types';
 import { TROOP_TYPES } from '../types';
 import { EVENT_RULES, presetFor } from '../master/events';
+import { heroName, skillName } from '../display';
 import { DEFAULT_CONFIG, type CalcConfig } from './config';
 import {
   heroGearFactor,
@@ -179,7 +180,7 @@ export function optimize(
     out = searchHeroBattle(ctx, pool, slots);
   }
 
-  const missing = new Set(out.results.flatMap((r) => (r.score.heroContrib ?? []).filter((c) => c.missingSkills).map((c) => heroes.get(c.heroId)?.name ?? c.heroId)));
+  const missing = new Set(out.results.flatMap((r) => (r.score.heroContrib ?? []).filter((c) => c.missingSkills).map((c) => heroName(heroes.get(c.heroId), c.heroId))));
   if (missing.size > 0) {
     warnings.push(
       `スキルの数値が未取得の英雄は、スキル効果を 0 として計算しています（${[...missing].join('、')}）。星やレベルを上げても、スキルが判明している英雄に負けやすくなります。「データ更新」で取得すると正しく比較できます。`,
@@ -257,7 +258,7 @@ function searchJoiner(ctx: Ctx, pool: HeroMaster[]) {
       const pre = precomputeExpedition([h], user, req.event, 'joiner', req.enemyRatio, heroes, cfg);
       const best = req.optimizeRatio ? optimizeRatio(pre, preset, user, cfg) : { ratio: preset, total: 0 };
       const score = scoreExpedition(pre, best.ratio, user, cfg);
-      score.notes = [...score.notes, `集結に加わる効果: ${value.toFixed(1)}%（${h.skills.find((s) => s.kind === 'expedition')?.name ?? 'スキル情報なし'}）`];
+      score.notes = [...score.notes, `集結に加わる効果: ${value.toFixed(1)}%（${skillName(h.skills.find((s) => s.kind === 'expedition'), 'スキル情報なし')}）`];
       // ジョイナーの順位はスキル価値で決める（兵力部分は誰を選んでも同じ）
       return { h, value, result: toResult([h], best.ratio, { ...score, total: value }, 'expedition') };
     })

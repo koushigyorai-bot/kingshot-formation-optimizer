@@ -61,9 +61,9 @@ export const DEFAULT_CONFIG: CalcConfig = {
   },
   heroGearConquestWeight: {
     value: 0.5,
-    label: 'Conquest での英雄装備の反映率',
+    label: '討伐での英雄装備の反映率',
     assumption: true,
-    note: '装備の Conquest ステータス（英雄の攻撃・HP）は未確認。Expedition 効果 % の半分を英雄ステータス % とみなす',
+    note: '装備の討伐ステータス（英雄の攻撃・HP）は未確認。遠征での効果 % の半分を英雄ステータス % とみなす',
   },
   vipAttackPerLevel: {
     value: 0,

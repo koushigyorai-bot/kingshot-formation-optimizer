@@ -1,7 +1,7 @@
 import { normalizeHeroId } from '../../master';
 import { collectLinks, htmlToLines } from '../html';
 import { RobotsDisallowedError } from '../http';
-import { mineHeroCombos, mineRatioTemplates, parseOfficialHeroLines } from '../parsers';
+import { mineHeroCombos, mineRatioTemplates, parseOfficialHeroLines, parseOfficialJaNames } from '../parsers';
 import { emptyResult, heroNameIndex, type SiteAdapter } from './types';
 
 /**
@@ -47,9 +47,28 @@ export const officialWikiAdapter: SiteAdapter = {
         const html = await ctx.fetcher.get(l.url);
         const page = parseOfficialHeroLines(htmlToLines(html));
         page.warnings.forEach((w) => res.warnings.push(`${l.id}: ${w}`));
+
+        // 日本語版ページ（言語切り替えのリンク）から英雄名・スキル名・ウィジェット名を取る
+        let heroNameJa: string | undefined;
+        const jaUrl = collectLinks(html, BASE, (h) => /kingshotwiki\.com\/ja\/heroes\/[^/#]+\/?$/.test(h))[0]?.href;
+        if (jaUrl) {
+          try {
+            const ja = parseOfficialJaNames(htmlToLines(await ctx.fetcher.get(jaUrl)));
+            heroNameJa = ja.heroName;
+            if (ja.skillNames.length === page.skills.length) {
+              page.skills = page.skills.map((sk, idx) => ({ ...sk, nameJa: ja.skillNames[idx] }));
+            } else if (ja.skillNames.length) {
+              res.warnings.push(`${l.id}: 日本語版のスキル数（${ja.skillNames.length}）が英語版（${page.skills.length}）と違うため、日本語名を付けませんでした`);
+            }
+            if (page.widget && ja.widgetName) page.widget = { ...page.widget, nameJa: ja.widgetName };
+          } catch (e) {
+            res.warnings.push(`${l.id}: 日本語版ページの取得に失敗 ${(e as Error).message}`);
+          }
+        }
         res.heroPatches.push({
           heroId: l.id,
           ...(page.name ? { name: page.name } : {}),
+          ...(heroNameJa ? { nameJa: heroNameJa } : {}),
           ...(typeof l.generation === 'number' ? { generation: l.generation } : {}),
           ...(page.rarity ? { rarity: page.rarity } : {}),
           ...(page.troop ? { troop: page.troop } : {}),

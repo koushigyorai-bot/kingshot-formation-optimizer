@@ -6,6 +6,7 @@ import { HERO_GEAR_RANKS, HERO_GEAR_SLOT_LABELS, HERO_GEAR_SLOTS, type HeroGearR
 import { HERO_GEAR_RANK_LABEL, HERO_GEAR_SLOT_STAT, heroGearSlotValue } from '@/lib/calculator/heroGear';
 import { DEFAULT_CONFIG } from '@/lib/calculator/config';
 import { validateOwnedHero } from '@/lib/validation/userData';
+import { skillName, widgetName } from '@/lib/display';
 import { GenBadge, HeroPortrait, NumberField, StatusBadge, Toggle, TroopChip } from './ui';
 
 function Stars({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -94,7 +95,7 @@ export function HeroCard({ hero, owned, onChange }: { hero: HeroMaster; owned: O
                 <NumberField
                   key={i}
                   compact
-                  label={expSkills[i]?.name ?? (i < expSlots ? `スキル${i + 1}` : '（枠なし）')}
+                  label={expSkills[i] ? skillName(expSkills[i]) : i < expSlots ? `スキル${i + 1}` : '（枠なし）'}
                   limit="skillLevel"
                   disabled={i >= expSlots}
                   value={owned.expeditionSkills[i] ?? 0}
@@ -112,7 +113,7 @@ export function HeroCard({ hero, owned, onChange }: { hero: HeroMaster; owned: O
                 <NumberField
                   key={i}
                   compact
-                  label={conqSkills[i]?.name ?? (i < conqSlots ? `スキル${i + 1}` : '（枠なし）')}
+                  label={conqSkills[i] ? skillName(conqSkills[i]) : i < conqSlots ? `スキル${i + 1}` : '（枠なし）'}
                   limit="skillLevel"
                   disabled={i >= conqSlots}
                   value={owned.conquestSkills[i] ?? 0}
@@ -178,7 +179,7 @@ export function HeroCard({ hero, owned, onChange }: { hero: HeroMaster; owned: O
             {canWidget ? (
               <div className="grid grid-cols-2 items-end gap-2">
                 <Toggle
-                  label={hero.widget?.name ? `所持（${hero.widget.name}）` : '所持'}
+                  label={widgetName(hero.widget) ? `所持（${widgetName(hero.widget)}）` : '所持'}
                   checked={owned.widget.owned}
                   onChange={(v) => onChange({ widget: { owned: v, level: v ? Math.max(1, owned.widget.level) : 0 } })}
                 />

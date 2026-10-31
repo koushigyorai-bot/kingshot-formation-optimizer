@@ -158,3 +158,20 @@ test('ヒルデ: 「25% の確率で 120〜200% のダメージ」は与ダメ�
   const noble = "Hilde's noble path increases the total Squads' Attack by 3%/6%/9%/12%/15% and Defense by 2%/4%/6%/8%/10%.";
   assert.deepEqual(at(noble, 5), [['squadAttack', 15], ['squadDefense', 10]]);
 });
+
+test('公式 Wiki 日本語版: 英雄名・スキル名（英語版と同じ順番）・ウィジェット名', async () => {
+  const { parseOfficialJaNames } = await import('../src/lib/crawler/parsers');
+  const lines = [
+    'アマデウス', 'レアリティ', 'レジェンド', '兵種', '歩兵', 'スキル', '討伐', '遠征', '特性',
+    '三段斬り', '一定範囲内の敵を高くカチ上げ、攻撃*160%/176%/192%/208%/224%のダメージを与える。',
+    '臨戦態勢', '少年剣士は仲間の鼓舞に長けている。味方全部隊の総殺傷力が 5%/10%/15%/20%/25%上昇する。',
+    'スペシャル', 'ステータス', '討伐', '攻撃', '431', '遠征', '殺傷力', '+62.50%',
+    '運命の盾', '281,250',
+    '双剣防御', '自身の受けるダメージが 10%/15%/20%/25%/30%減少する。',
+    'サロからのヒント',
+  ];
+  const r = parseOfficialJaNames(lines);
+  assert.equal(r.heroName, 'アマデウス');
+  assert.deepEqual(r.skillNames, ['三段斬り', '臨戦態勢', '双剣防御']);
+  assert.equal(r.widgetName, '運命の盾');
+});

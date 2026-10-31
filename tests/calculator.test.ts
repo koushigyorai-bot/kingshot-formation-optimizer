@@ -59,13 +59,13 @@ test('ジョイナーは先頭英雄の 1 番目の Expedition スキルだけ',
   const u = account(['amadeus', 'gordon', 'chenko']);
   const t = collectSkills([H.get('amadeus')!, H.get('gordon')!], u, 'expedition', 'joiner', H);
   const stats = t.contributions.map((c) => `${c.heroId}:${c.skill}`);
-  assert.deepEqual(stats, ['amadeus:Battle Ready']);
+  assert.deepEqual(stats, ['amadeus:臨戦態勢']);
 });
 
 test('タレントは編成外でも所持していれば有効（星の数をレベルとみなす）', () => {
   const u = account(['amadeus', 'gordon'], (x) => (x.heroes.amadeus!.stars = 4));
   const t = collectSkills([H.get('gordon')!], u, 'expedition', 'leader', H);
-  assert.ok(t.contributions.some((c) => c.skill === 'Born Leader' && c.value === 12));
+  assert.ok(t.contributions.some((c) => c.skill === '天性のリーダー' && c.value === 12));
 });
 
 test('兵種相性: 熊は弓兵 +10%、対人は相性の向きどおり', () => {

@@ -90,11 +90,11 @@ export function parseOfficialHeroLines(lines: string[]): ParsedHeroPage {
     const def = numberAfter(lines, /^Def(ense)?$/i, conqIdx, expIdx);
     const hp = numberAfter(lines, /^Health$/i, conqIdx, expIdx);
     if (atk && def && hp) out.conquest = { attack: atk.value, defense: def.value, health: hp.value };
-    else warnings.push('Conquest ステータスを読み取れませんでした');
+    else warnings.push('討伐ステータスを読み取れませんでした');
     const eAtk = numberAfter(lines, /^Attack$/i, expIdx, expIdx + 6);
     const eDef = numberAfter(lines, /^Defen[cs]e$/i, expIdx, expIdx + 6);
     if (eAtk) out.expedition = { attack: eAtk.value, defense: eDef?.value ?? eAtk.value };
-    else warnings.push('Expedition ステータスを読み取れませんでした');
+    else warnings.push('遠征ステータスを読み取れませんでした');
   } else warnings.push('Stats セクションが見つかりません');
 
   // Skills: "Skills" の直後にタブ（Conquest / Expedition / Talent）が並ぶ箇所
@@ -192,7 +192,7 @@ export function parseFanHeroLines(lines: string[]): Omit<ParsedHeroPage, 'skills
   const def = numberAfter(lines, /^Conquest Defen[cs]e$/i, 0);
   const hp = numberAfter(lines, /^Conquest Health$/i, 0);
   if (atk && def && hp) out.conquest = { attack: atk.value, defense: def.value, health: hp.value };
-  else warnings.push('Conquest ステータスを読み取れませんでした');
+  else warnings.push('討伐ステータスを読み取れませんでした');
   const ea = numberAfter(lines, /^Expedition Attack$/i, 0);
   const ed = numberAfter(lines, /^Expedition Defen[cs]e$/i, 0);
   if (ea) out.expedition = { attack: ea.value, defense: ed?.value ?? ea.value };
@@ -342,4 +342,49 @@ function eventFromContext(text: string): EventType | null {
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/* ------------------------------------------------------------------ */
+/* 公式 Wiki 日本語版: 英雄名・スキル名・ウィジェット名                  */
+/* ------------------------------------------------------------------ */
+
+export interface ParsedJaNames {
+  heroName?: string;
+  /** 英語版と同じ順番（討伐 → 遠征 → 特性 → ウィジェット） */
+  skillNames: string[];
+  widgetName?: string;
+}
+
+const JA_END = /(からのヒント|ゲームをプレイ|公式SNS|貢献者|Tips from|Play the Game|Our Socials|Contributors)/;
+const isJaDesc = (l: string) => l.length > 12 && (/\d/.test(l) || /[。、]/.test(l));
+
+/** 日本語版ページの行配列から名称だけを取り出す（数値は英語版を使う） */
+export function parseOfficialJaNames(lines: string[]): ParsedJaNames {
+  const out: ParsedJaNames = { skillNames: [] };
+  const ri = lines.findIndex((l) => l === 'レアリティ');
+  if (ri > 0) out.heroName = lines[ri - 1];
+  const si = lines.findIndex((l, i) => l === 'スキル' && /^(討伐|遠征|特性)$/.test(lines[i + 1] ?? ''));
+  if (si < 0) return out;
+  let i = si + 1;
+  while (/^(討伐|遠征|特性)$/.test(lines[i] ?? '')) i++;
+  let inSpecial = false;
+  for (; i < lines.length - 1; i++) {
+    const l = lines[i]!;
+    if (JA_END.test(l)) break;
+    if (l === 'スペシャル') {
+      inSpecial = true;
+      continue;
+    }
+    const next = lines[i + 1]!;
+    // ウィジェット名: スペシャル内で、直後が戦力値（数値だけの行）
+    if (inSpecial && !out.widgetName && l.length <= 30 && /^[\d,]+$/.test(next.trim()) && !/^(攻撃|防御|HP|殺傷力|体力)/.test(l)) {
+      out.widgetName = l;
+      continue;
+    }
+    if (l.length <= 24 && !isJaDesc(l) && isJaDesc(next) && !/^(攻撃|防御|HP|殺傷力|体力|討伐|遠征|ステータス)$/.test(l)) {
+      out.skillNames.push(l);
+      i++;
+    }
+  }
+  return out;
 }

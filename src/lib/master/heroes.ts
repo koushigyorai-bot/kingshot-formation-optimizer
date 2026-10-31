@@ -11,9 +11,27 @@ import { SRC } from './sources';
  * - スキル説明文は原文のまま保持し、効果の数値化は parseSkillDescription に任せる。
  */
 
-function skill(name: string, kind: SkillKind, description: string): Skill {
-  return { name, kind, description, effects: parseSkillDescription(description) };
+function skill(name: string, kind: SkillKind, description: string, nameJa?: string): Skill {
+  return { name, kind, description, effects: parseSkillDescription(description), ...(nameJa ? { nameJa } : {}) };
 }
+
+/** 公式 Wiki 日本語版で確認したスキル名（英語名 → 日本語名）。データ更新で他の英雄の分も自動で入る */
+const SKILL_JA: Record<string, string> = {
+  'Combo Slash': '三段斬り',
+  'Arcane Swordship': '剣気',
+  Onslaught: '快進撃',
+  'Battle Ready': '臨戦態勢',
+  'Way of the Blade': '剣術指導',
+  'Unrighteous Strike': '不義の一撃',
+  'Born Leader': '天性のリーダー',
+  'Double Parry': '双剣防御',
+  Discernment: '真実の術',
+  'BBQ Feast': 'バーベキュー',
+  'Culinary Chaos': '嵐の厨房',
+  'Emergency Snack': '非常食',
+  'Super Nutrients': '幸せグルメ',
+  'Trash Talk': '暴言',
+};
 
 /* ------------------------------------------------------------------ */
 /* 推定値                                                              */
@@ -230,8 +248,8 @@ const VERIFIED: Record<string, VerifiedPatch> = {
     widget: { name: "Fate's Writ", expedition: { lethality: 70, health: 70 }, conquest: { attack: 630, defense: 630, health: 6300 } },
     sources: [
       SRC.masteryConquest,
-      { site: 'kingshotmastery.com', url: 'https://kingshotmastery.com/heroes/petra', fetchedAt: '2026-10-28T00:00:00Z', reliability: 'community', note: 'Expedition スキル・ウィジェット' },
-      { site: 'kingshotoptimizer.com', url: 'https://kingshotoptimizer.com/heroes/petra/', fetchedAt: '2026-10-28T00:00:00Z', reliability: 'community', note: 'Expedition スキルの Lv1〜5 段階値（kingshotoptimizer.com）' },
+      { site: 'kingshotmastery.com', url: 'https://kingshotmastery.com/heroes/petra', fetchedAt: '2026-10-28T00:00:00Z', reliability: 'community', note: '遠征スキル・ウィジェット' },
+      { site: 'kingshotoptimizer.com', url: 'https://kingshotoptimizer.com/heroes/petra/', fetchedAt: '2026-10-28T00:00:00Z', reliability: 'community', note: '遠征スキルの Lv1〜5 段階値（kingshotoptimizer.com）' },
     ],
     complete: false,
   },
@@ -265,7 +283,7 @@ export function buildSeedHeroes(): HeroMaster[] {
     const estimatedFields: HeroMaster['estimatedFields'] = [];
     const conquest = v?.conquest ?? (estimatedFields.push('conquest'), estimatedConquest(r.rarity, r.generation, r.troop));
     const expedition = v?.expedition ?? (estimatedFields.push('expedition'), estimatedExpedition(r.rarity, r.generation));
-    const skills = v?.skills ?? [];
+    const skills = (v?.skills ?? []).map((sk) => (SKILL_JA[sk.name] && !sk.nameJa ? { ...sk, nameJa: SKILL_JA[sk.name] } : sk));
     const hasExpeditionSkills = skills.some((s) => s.kind === 'expedition');
     if (!hasExpeditionSkills && r.rarity !== 'rare') estimatedFields.push('skills');
 

@@ -34,6 +34,7 @@ import { effectValueAt } from '../crawler/parseSkill';
 import { COUNTERS, EVENT_RULES, type EventRule } from '../master/events';
 import { DEFAULT_CONFIG, type CalcConfig } from './config';
 import { heroGearTroopBonus } from './heroGear';
+import { heroName, skillName } from '../display';
 import { simulateBattle, toSimSkill, type SimResult, type SimSkill, type SimUnit } from './battleSim';
 
 export const TROOP_LABEL: Record<TroopType, string> = { infantry: '歩兵', cavalry: '騎兵', archer: '弓兵' };
@@ -130,7 +131,7 @@ function addEffect(tot: SkillTotals, heroId: string, skill: Skill, e: SkillEffec
   if (v === 0) return;
   const bucket = e.troop ? tot.byTroop[e.troop] : tot.all;
   bucket[e.stat] = (bucket[e.stat] ?? 0) + v;
-  tot.contributions.push({ heroId, skill: skill.name, stat: e.stat, value: v });
+  tot.contributions.push({ heroId, skill: skillName(skill), stat: e.stat, value: v });
 }
 
 /** n 番目（0 始まり）の Expedition / Conquest スキルを取り出す */
@@ -323,13 +324,13 @@ export function precomputeExpedition(
   });
   const inFormation = new Set(formation.map((h) => h.id));
   const talents = skills.contributions.filter((c) => !inFormation.has(c.heroId));
-  if (talents.length) notes.push(`編成外タレント: ${talents.map((c) => `${allHeroes.get(c.heroId)?.name ?? c.heroId}「${c.skill}」+${c.value}%`).join('、')}`);
+  if (talents.length) notes.push(`編成外タレント: ${talents.map((c) => `${heroName(allHeroes.get(c.heroId), c.heroId)}「${c.skill}」+${c.value}%`).join('、')}`);
 
-  if (role === 'joiner') notes.push('参加者（ジョイナー）として計算: 先頭英雄の 1 番目の Expedition スキルのみ反映（公式 Wiki）');
+  if (role === 'joiner') notes.push('参加者（ジョイナー）として計算: 先頭英雄の 1 番目の 遠征スキルのみ反映（公式 Wiki）');
   if (event === 'bear') notes.push('熊は反撃しないため与ダメージのみで評価。弓兵に Ranged Strike +10% を適用');
   if (user.buffs.reportOverride.enabled) notes.push('兵種ステータスは戦闘レポートの値で上書き中');
   for (const h of formation) {
-    if (h.estimatedFields?.length) notes.push(`${h.name}: ${h.estimatedFields.join('・')} が推定値`);
+    if (h.estimatedFields?.length) notes.push(`${heroName(h)}: ${h.estimatedFields.join('・')} が推定値`);
   }
   return { offense, defense, base, adjusted, factors, notes, heroContrib, stance: rule.stance, event };
 }
@@ -513,8 +514,8 @@ export function scoreHeroBattle(
     const pos = positions[idx];
     const front = pos ? pos.label === '前列' : idx < 2;
     const mismatch = pos?.preferred && !pos.preferred.includes(h.troop) ? cfg.positionMismatchPenalty.value : 1;
-    if (mismatch < 1) notes.push(`${h.name}（${TROOP_LABEL[h.troop]}）は${pos?.label}に不向き（推奨: ${pos?.preferred?.map((t) => TROOP_LABEL[t]).join('・')}）`);
-    if (h.estimatedFields?.includes('conquest')) notes.push(`${h.name}: 討伐ステータスが推定値`);
+    if (mismatch < 1) notes.push(`${heroName(h)}（${TROOP_LABEL[h.troop]}）は${pos?.label}に不向き（推奨: ${pos?.preferred?.map((t) => TROOP_LABEL[t]).join('・')}）`);
+    if (h.estimatedFields?.includes('conquest')) notes.push(`${heroName(h)}: 討伐ステータスが推定値`);
     units.push(toSimUnit(h, o, front, mismatch, cfg));
   });
 
@@ -545,7 +546,7 @@ export function scoreHeroBattle(
       missingSkills: !h.skills.some((sk) => sk.kind === 'conquest'),
       estimatedStats: !!h.estimatedFields?.includes('conquest'),
     });
-    if (r.castableSkills > 0 && r.casts === 0 && r.deathTime !== null) notes.push(`${h.name} はスキルを発動する前に倒される見込み（${r.deathTime.toFixed(1)} 秒）`);
+    if (r.castableSkills > 0 && r.casts === 0 && r.deathTime !== null) notes.push(`${heroName(h)} はスキルを発動する前に倒される見込み（${r.deathTime.toFixed(1)} 秒）`);
   });
 
   notes.unshift(

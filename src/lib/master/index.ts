@@ -56,6 +56,7 @@ export function seedMasterData(): MasterData {
 export interface HeroPatch {
   heroId: string;
   name?: string;
+  nameJa?: string;
   generation?: number | null;
   rarity?: Rarity;
   troop?: TroopType;
@@ -172,6 +173,10 @@ export function mergeMasterData(base: MasterData, snapshot: CrawlSnapshot): Mast
         else conflicts.push({ heroId: h.id, field, values: [{ site: bestSite(h), value: fmt(cur) }, entry], adopted: pr <= curPr ? p.source.site : bestSite(h) });
       }
       if (pr <= curPr) {
+        if (field === 'skills' && Array.isArray(cur) && Array.isArray(next)) {
+          const ja = new Map((cur as Skill[]).filter((s) => s.nameJa).map((s) => [s.name, s.nameJa!]));
+          next = (next as Skill[]).map((s) => (s.nameJa || !ja.has(s.name) ? s : { ...s, nameJa: ja.get(s.name) })) as typeof next;
+        }
         (h as unknown as Record<string, unknown>)[field] = next;
         adoptedPriority.set(`${h.id}:${field}`, pr);
         if (h.estimatedFields) h.estimatedFields = h.estimatedFields.filter((f) => f !== field);
@@ -189,6 +194,8 @@ export function mergeMasterData(base: MasterData, snapshot: CrawlSnapshot): Mast
     if (p.troop) apply('troop', p.troop);
     if (p.rarity) apply('rarity', p.rarity);
     if (p.generation !== undefined) apply('generation', p.generation);
+    // 日本語名は公式 Wiki 日本語版で取れた場合だけ、未設定の英雄に入れる（同梱の表記を優先）
+    if (p.nameJa && !h.nameJa && p.source.site === 'kingshotwiki.com') h.nameJa = p.nameJa;
 
     if (!h.sources.some((s) => s.site === p.source.site && s.url === p.source.url)) h.sources.push(p.source);
     h.sources = h.sources.filter((s) => s.site !== 'estimate' || (h.estimatedFields?.length ?? 0) > 0);

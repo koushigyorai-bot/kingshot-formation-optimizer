@@ -44,7 +44,7 @@ export const EVENT_RULES: Record<EventType, EventRule> = {
         source: { site: 'kingshotmastery.com', url: 'https://kingshotmastery.com/guides/kingshot-troop-formations-guide', reliability: 'community' },
       },
       {
-        text: '集結に参加する側（ジョイナー）は、先頭の英雄の最上段 Expedition スキルだけが反映される。',
+        text: '集結に参加する側（ジョイナー）は、先頭の英雄の最上段 遠征スキルだけが反映される。',
         source: SRC.officialBear,
       },
     ],
@@ -60,7 +60,7 @@ export const EVENT_RULES: Record<EventType, EventRule> = {
     defaultEnemy: { infantry: 100, cavalry: 0, archer: 0 },
     notes: [
       { text: '自分で集結を開く場合、3 人全員のスキルが有効（左端の隊長枠に誰を置いても同じ）。', source: SRC.officialBear },
-      { text: '参加する場合は最上段の Expedition スキルのみ有効。スキルの高い上位 4 人の参加者分が採用される。', source: SRC.officialBear },
+      { text: '参加する場合は最上段の 遠征スキルのみ有効。スキルの高い上位 4 人の参加者分が採用される。', source: SRC.officialBear },
       { text: '熊は反撃しないため、生存力ではなく与ダメージだけで評価する。', source: SRC.masteryBear },
       { text: '熊は歩兵扱いのため、弓兵は「Ranged Strike」で与ダメージ +10%（プレイヤー解析）。', source: SRC.bearMechanics },
     ],

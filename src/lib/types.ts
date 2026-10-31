@@ -96,6 +96,8 @@ export interface SkillEffect {
 
 export interface Skill {
   name: string;
+  /** 日本語版での名称（公式 Wiki 日本語版） */
+  nameJa?: string;
   kind: SkillKind;
   description: string;
   effects: SkillEffect[];
@@ -119,6 +121,7 @@ export interface ExpeditionStats {
 
 export interface WidgetMaster {
   name?: string;
+  nameJa?: string;
   /** 最大レベル時の Expedition 補正（%）。 */
   expedition: { lethality?: number; health?: number; attack?: number; defense?: number };
   conquest?: Partial<ConquestStats>;

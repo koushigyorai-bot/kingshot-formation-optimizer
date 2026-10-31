@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/client/store';
+import { heroName } from '@/lib/display';
 import { heroById } from '@/lib/master';
 import { EVENT_RULES, presetFor } from '@/lib/master/events';
 import { DEFAULT_REQUEST, listAssumptions, optimize } from '@/lib/calculator';
@@ -236,7 +237,7 @@ function ResultCard({
                   <div className="text-[10px] uppercase tracking-wide text-ink-mute">
                     {joiner ? '先頭（スキルが反映）' : positions?.[i]?.label ?? (i === 0 ? '左（隊長枠）' : `枠${i + 1}`)}
                   </div>
-                  <div className="font-semibold leading-tight">{h.name}</div>
+                  <div className="font-semibold leading-tight">{heroName(h)}</div>
                   <div className="mt-0.5 flex gap-1">
                     <GenBadge generation={h.generation} rarity={h.rarity} />
                     <TroopChip troop={h.troop} />
@@ -359,7 +360,7 @@ function ResultCard({
                   const h = heroes.get(id);
                   return h ? (
                     <span key={id} className="inline-flex items-center gap-1 text-xs">
-                      {h.name}
+                      {heroName(h)}
                       <StatusBadge status={h.dataStatus} />
                     </span>
                   ) : null;
@@ -412,7 +413,7 @@ function HeroContribTable({ contrib, heroes }: { contrib: HeroContribution[]; he
               const h = heroes.get(c.heroId);
               return (
                 <tr key={c.heroId} className="border-t border-parchment-line align-top">
-                  <td className="py-1 font-semibold">{h?.name ?? c.heroId}</td>
+                  <td className="py-1 font-semibold">{heroName(h, c.heroId)}</td>
                   <td className="font-mono">
                     {c.level} / {c.stars}
                   </td>

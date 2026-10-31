@@ -2,11 +2,20 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/client/store';
+import { heroName, skillName } from '@/lib/display';
 import type { CrawlSnapshot, SiteReport } from '@/lib/master';
 import { SITE_PROFILES } from '@/lib/master/sources';
 import { BUNDLED_SNAPSHOT_PATH, exportSnapshotJson, snapshotFileName } from '@/lib/master/snapshot';
-import type { SourceSite } from '@/lib/types';
+import type { SkillKind, SourceSite } from '@/lib/types';
 import { GenBadge, Notice, SectionTitle, SourceLink, StatusBadge, TroopChip } from '@/components/ui';
+
+const SKILL_KIND_JA: Record<SkillKind, string> = {
+  conquest: '討伐',
+  expedition: '遠征',
+  talent: '特性',
+  widget_conquest: '専用装備・討伐',
+  widget_expedition: '専用装備・遠征',
+};
 
 const TARGETS: SourceSite[] = ['kingshotwiki.com', 'kingshot.wiki', 'kingshottools.pro', 'grindnstrat.com'];
 
@@ -87,6 +96,7 @@ export default function DataPage() {
     setBusy(false);
   };
 
+  const byId = new Map(master.heroes.map((h) => [h.id, h]));
   const counts = {
     verified: master.heroes.filter((h) => h.dataStatus === 'verified').length,
     partial: master.heroes.filter((h) => h.dataStatus === 'partial').length,
@@ -220,7 +230,7 @@ export default function DataPage() {
           <ul className="space-y-1 text-xs">
             {master.conflicts.slice(0, 60).map((c, i) => (
               <li key={i}>
-                <b>{c.heroId}</b> / {c.field}：
+                <b>{heroName(byId.get(c.heroId), c.heroId)}</b> / {c.field}：
                 {c.values.map((v) => `${SITE_PROFILES[v.site]?.label ?? v.site} = ${v.value.slice(0, 80)}`).join('　|　')}
                 <span className="ml-1 text-arc">→ 採用: {SITE_PROFILES[c.adopted]?.label ?? c.adopted}</span>
               </li>
@@ -235,13 +245,13 @@ export default function DataPage() {
           <ul className="space-y-1 text-xs">
             {master.templates.map((t, i) => (
               <li key={i}>
-                [{t.event}] {t.heroIds.length ? t.heroIds.join(' + ') : ''} {t.ratio ? `比率 ${t.ratio.infantry}/${t.ratio.cavalry}/${t.ratio.archer}` : ''}
+                [{t.event}] {t.heroIds.length ? t.heroIds.map((id) => heroName(byId.get(id), id)).join(' + ') : ''} {t.ratio ? `比率 ${t.ratio.infantry}/${t.ratio.cavalry}/${t.ratio.archer}` : ''}
                 {t.generation ? ` (Gen${t.generation})` : ''} — <SourceLink source={t.source} />
               </li>
             ))}
             {master.tierLists.map((t, i) => (
               <li key={`t${i}`}>
-                [ティア/{t.category}] {t.entries.map((e) => `${e.heroId}:${e.tier}`).join(', ')} — <SourceLink source={t.source} />
+                [ティア/{t.category}] {t.entries.map((e) => `${heroName(byId.get(e.heroId), e.heroId)}:${e.tier}`).join(', ')} — <SourceLink source={t.source} />
               </li>
             ))}
           </ul>
@@ -265,7 +275,10 @@ export default function DataPage() {
           <tbody>
             {master.heroes.map((h) => (
               <tr key={h.id} className="border-t border-parchment-line align-top">
-                <td className="py-1 font-semibold">{h.name}</td>
+                <td className="py-1 font-semibold">
+                  {heroName(h)}
+                  {h.nameJa && <div className="text-[10px] font-normal text-ink-mute">{h.name}</div>}
+                </td>
                 <td>
                   <div className="flex gap-1">
                     <GenBadge generation={h.generation} rarity={h.rarity} />
@@ -278,7 +291,7 @@ export default function DataPage() {
                 <td className={`font-mono ${h.estimatedFields?.includes('expedition') ? 'text-ink-mute' : ''}`}>
                   {h.expedition.attack}/{h.expedition.defense}
                 </td>
-                <td title={h.skills.map((s) => `[${s.kind}] ${s.name}: ${s.effects.map((e) => `${e.stat} ${e.values.join('/')}`).join(', ')}`).join('\n')}>
+                <td title={h.skills.map((s) => `[${SKILL_KIND_JA[s.kind]}] ${skillName(s)}: ${s.effects.map((e) => `${e.stat} ${e.values.join('/')}`).join(', ')}`).join('\n')}>
                   {h.skills.length ? `${h.skills.length} 件` : '—'}
                 </td>
                 <td>
